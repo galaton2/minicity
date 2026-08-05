@@ -1,848 +1,999 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel City Builder - Advanced Logic</title>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #12121a;
-            font-family: 'Courier New', Courier, monospace;
-            color: #fff;
-            user-select: none;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel City Builder 2.0</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; overflow: hidden; background: #0d0d14;
+    font-family: 'Courier New', Courier, monospace; color: #fff; user-select: none;
+  }
+  #gameCanvas { display:block; width:100vw; height:100vh; cursor:grab; }
+  #gameCanvas:active { cursor:grabbing; }
 
-        #gameCanvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            cursor: grab;
-        }
-        #gameCanvas:active {
-            cursor: grabbing;
-        }
+  #hud {
+    position:absolute; top:0; left:0; width:100%;
+    background:rgba(14,14,22,0.94); padding:8px 14px;
+    display:flex; justify-content:center; align-items:center; gap:10px;
+    border-bottom:2px solid #333348; box-shadow:0 4px 15px rgba(0,0,0,0.6);
+    z-index:10; flex-wrap:wrap;
+  }
+  .resource {
+    font-size:14px; font-weight:bold; display:flex; align-items:center; gap:5px;
+    background:#1c1c28; padding:5px 10px; border-radius:6px; border:1px solid #3c3c52;
+    white-space:nowrap;
+  }
+  .res-money{color:#4EFE83;} .res-pop{color:#FFB74D;} .res-food{color:#FF8A65;}
+  .res-water{color:#4FC3F7;} .res-power{color:#FFD54F;} .res-happy{color:#F06292;}
+  .trend-up{color:#4EFE83;} .trend-down{color:#FF5252;} .trend-flat{color:#888;}
 
-        /* Верхняя панель ресурсов */
-        #hud {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(18, 18, 26, 0.92);
-            padding: 10px 15px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            border-bottom: 2px solid #333348;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-            z-index: 10;
-            flex-wrap: wrap;
-        }
+  #toastContainer{
+    position:absolute; top:60px; left:50%; transform:translateX(-50%);
+    z-index:30; display:flex; flex-direction:column; gap:6px; align-items:center;
+    pointer-events:none;
+  }
+  .toast{
+    background:rgba(20,20,30,0.95); border:1px solid #4EFE83; color:#fff;
+    padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold;
+    box-shadow:0 4px 12px rgba(0,0,0,0.5); animation:toastIn 0.25s ease, toastOut 0.4s ease 3.6s forwards;
+    max-width:80vw; text-align:center;
+  }
+  .toast.warn{ border-color:#FF5252; }
+  .toast.info{ border-color:#4FC3F7; }
+  @keyframes toastIn{ from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes toastOut{ to{opacity:0; transform:translateY(-10px);} }
 
-        .resource {
-            font-size: 15px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            background: #222230;
-            padding: 5px 10px;
-            border-radius: 6px;
-            border: 1px solid #3c3c52;
-        }
+  #controls-panel{
+    position:absolute; top:60px; right:12px; display:flex; flex-direction:column; gap:8px; z-index:10;
+  }
+  .ctrl-btn{
+    background:rgba(25,25,38,0.92); border:1px solid #444460; color:#fff;
+    padding:7px 10px; border-radius:6px; cursor:pointer; font-family:inherit;
+    font-size:12px; font-weight:bold; transition:all .15s; display:flex;
+    align-items:center; justify-content:center; gap:5px;
+  }
+  .ctrl-btn:hover{ background:#3a3a55; border-color:#4EFE83; }
+  .ctrl-btn.toggled{ background:#4a3050; border-color:#F06292; }
+  .speed-group{ display:flex; gap:4px; background:rgba(25,25,38,0.92); padding:4px; border-radius:6px; border:1px solid #444460; }
+  .speed-btn{ background:#202030; border:none; color:#aaa; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; }
+  .speed-btn.active{ background:#FFD54F; color:#111; }
 
-        .res-money { color: #4EFE83; }
-        .res-pop { color: #FFB74D; }
-        .res-food { color: #FF5252; }
-        .res-water { color: #4FC3F7; }
-        .res-power { color: #FFD54F; }
+  #toolbar-container{ position:absolute; bottom:14px; left:50%; transform:translateX(-50%); z-index:10; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  #toolbar{ background:rgba(14,14,22,0.96); padding:8px 10px; border-radius:10px; display:flex; gap:8px; border:2px solid #3c3c52; box-shadow:0 8px 20px rgba(0,0,0,0.7); max-width:94vw; overflow-x:auto; }
+  .build-btn{
+    width:62px; height:74px; background:#20202e; border:2px solid #44445c; border-radius:8px;
+    cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; align-items:center;
+    padding:5px 3px; transition:all .15s ease; flex-shrink:0; position:relative;
+  }
+  .build-btn:hover{ border-color:#4EFE83; background:#333348; }
+  .build-btn.active{ border-color:#FFD54F; background:#3d3d57; box-shadow:0 0 10px rgba(255,213,79,0.4); }
+  .build-btn.locked{ opacity:0.4; cursor:not-allowed; }
+  .build-btn.bulldoze.active{ border-color:#FF5252; box-shadow:0 0 10px rgba(255,82,82,0.5); }
+  .build-btn .btn-icon{ font-size:24px; line-height:1; }
+  .build-btn .btn-name{ font-size:8.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; text-align:center; }
+  .build-btn .btn-cost{ font-size:9.5px; color:#4EFE83; font-weight:bold; }
+  .build-btn .lock-badge{ position:absolute; top:2px; right:3px; font-size:9px; color:#FFB74D; }
 
-        /* Панель управления камерой и временем */
-        #controls-panel {
-            position: absolute;
-            top: 65px;
-            right: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 10;
-        }
+  #happyBarWrap{ width:220px; max-width:60vw; background:#1c1c28; border:1px solid #3c3c52; border-radius:6px; padding:4px 8px; font-size:11px; }
+  #happyBar{ height:6px; border-radius:3px; background:#333; overflow:hidden; margin-top:3px; }
+  #happyFill{ height:100%; background:linear-gradient(90deg,#FF5252,#FFD54F,#4EFE83); transition:width .3s; }
 
-        .ctrl-btn {
-            background: rgba(25, 25, 38, 0.9);
-            border: 1px solid #444460;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 13px;
-            font-weight: bold;
-            transition: all 0.15s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
+  #gameOverScreen{
+    display:none; position:absolute; top:0; left:0; width:100vw; height:100vh;
+    background:rgba(8,8,14,0.92); z-index:100; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:20px;
+  }
+  #gameOverScreen h1{ color:#FF5252; font-size:38px; margin:0 0 10px 0; }
+  #gameOverScreen p{ max-width:420px; color:#ccc; }
+  #gameOverStats{ margin:14px 0; font-size:14px; color:#FFD54F; }
+  button.restart-btn{
+    padding:12px 28px; font-size:16px; font-family:inherit; font-weight:bold;
+    background:#4EFE83; color:#111; border:none; cursor:pointer; border-radius:6px; margin-top:6px;
+  }
 
-        .ctrl-btn:hover {
-            background: #3a3a55;
-            border-color: #4EFE83;
-        }
-
-        .speed-group {
-            display: flex;
-            gap: 4px;
-            background: rgba(25, 25, 38, 0.9);
-            padding: 4px;
-            border-radius: 6px;
-            border: 1px solid #444460;
-        }
-
-        .speed-btn {
-            background: #202030;
-            border: none;
-            color: #aaa;
-            padding: 5px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .speed-btn.active {
-            background: #FFD54F;
-            color: #111;
-        }
-
-        /* Нижняя панель построек */
-        #toolbar-container {
-            position: absolute;
-            bottom: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
-
-        #toolbar {
-            background: rgba(18, 18, 26, 0.95);
-            padding: 8px 12px;
-            border-radius: 10px;
-            display: flex;
-            gap: 10px;
-            border: 2px solid #3c3c52;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.7);
-            max-width: 90vw;
-            overflow-x: auto;
-        }
-
-        .build-btn {
-            width: 65px;
-            height: 70px;
-            background: #252535;
-            border: 2px solid #44445c;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            padding: 5px;
-            transition: all 0.15s ease;
-            flex-shrink: 0;
-        }
-
-        .build-btn:hover {
-            border-color: #4EFE83;
-            background: #333348;
-        }
-
-        .build-btn.active {
-            border-color: #FFD54F;
-            background: #3d3d57;
-            box-shadow: 0 0 10px rgba(255, 213, 79, 0.4);
-        }
-
-        .build-btn img {
-            width: 32px;
-            height: 32px;
-            object-fit: contain;
-            image-rendering: pixelated;
-        }
-
-        .build-btn .btn-name {
-            font-size: 9px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-            text-align: center;
-        }
-
-        .build-btn .btn-cost {
-            font-size: 10px;
-            color: #4EFE83;
-            font-weight: bold;
-        }
-
-        /* Экран поражения */
-        #gameOverScreen {
-            display: none;
-            position: absolute;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(10, 10, 15, 0.9);
-            z-index: 100;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #gameOverScreen h1 {
-            color: #FF5252;
-            font-size: 42px;
-            margin: 0 0 10px 0;
-        }
-
-        button.restart-btn {
-            padding: 12px 28px;
-            font-size: 16px;
-            font-family: inherit;
-            font-weight: bold;
-            background: #4EFE83;
-            color: #111;
-            border: none;
-            cursor: pointer;
-            border-radius: 6px;
-        }
-    </style>
+  #tooltip{
+    position:absolute; display:none; z-index:20; background:rgba(10,10,16,0.95);
+    border:1px solid #4EFE83; border-radius:6px; padding:8px 10px; font-size:11px;
+    pointer-events:none; max-width:200px; line-height:1.5;
+  }
+  #tooltip b{ color:#FFD54F; }
+</style>
 </head>
 <body>
 
-    <div id="hud">
-        <div class="resource res-money">💰 $<span id="valMoney">1000</span></div>
-        <div class="resource res-pop">👥 <span id="valPop">0</span></div>
-        <div class="resource res-food">🌾 <span id="valFood">30</span></div>
-        <div class="resource res-water">💧 <span id="valWater">30</span></div>
-        <div class="resource res-power">⚡ <span id="valPower">15</span></div>
+  <div id="hud">
+    <div class="resource res-money">💰 $<span id="valMoney">1000</span></div>
+    <div class="resource res-pop">👥 <span id="valPop">0</span></div>
+    <div class="resource res-food">🌾 <span id="valFood">0</span>/<span id="capFood">0</span> <span id="trendFood" class="trend-flat">▬</span></div>
+    <div class="resource res-water">💧 <span id="valWater">0</span>/<span id="capWater">0</span> <span id="trendWater" class="trend-flat">▬</span></div>
+    <div class="resource res-power">⚡ <span id="valPowerProd">0</span>/<span id="valPowerReq">0</span></div>
+    <div id="happyBarWrap">
+      😊 Настроение: <span id="happyPct">100</span>%
+      <div id="happyBar"><div id="happyFill" style="width:100%"></div></div>
     </div>
+  </div>
 
-    <!-- Кнопки управления -->
-    <div id="controls-panel">
-        <button class="ctrl-btn" onclick="rotateMap()">🔄 Повернуть (90°)</button>
-        <div style="display: flex; gap: 4px;">
-            <button class="ctrl-btn" style="flex:1" onclick="changeZoom(0.15)">🔍 +</button>
-            <button class="ctrl-btn" style="flex:1" onclick="changeZoom(-0.15)">🔍 -</button>
-        </div>
-        <div class="speed-group">
-            <button class="speed-btn" onclick="setSpeed(0, this)">⏸️</button>
-            <button class="speed-btn active" onclick="setSpeed(1, this)">1x</button>
-            <button class="speed-btn" onclick="setSpeed(2, this)">2x</button>
-            <button class="speed-btn" onclick="setSpeed(5, this)">5x</button>
-        </div>
+  <div id="toastContainer"></div>
+
+  <div id="controls-panel">
+    <button class="ctrl-btn" onclick="rotateMap()">🔄 Повернуть</button>
+    <div style="display:flex; gap:4px;">
+      <button class="ctrl-btn" style="flex:1" onclick="changeZoom(0.15)">🔍 +</button>
+      <button class="ctrl-btn" style="flex:1" onclick="changeZoom(-0.15)">🔍 −</button>
     </div>
-
-    <canvas id="gameCanvas"></canvas>
-
-    <div id="toolbar-container">
-        <div id="toolbar"></div>
+    <button class="ctrl-btn" id="muteBtn" onclick="toggleMute()">🔊 Звук</button>
+    <div class="speed-group">
+      <button class="speed-btn" onclick="setSpeed(0, this)">⏸️</button>
+      <button class="speed-btn active" onclick="setSpeed(1, this)">1x</button>
+      <button class="speed-btn" onclick="setSpeed(2, this)">2x</button>
+      <button class="speed-btn" onclick="setSpeed(5, this)">5x</button>
     </div>
+  </div>
 
-    <div id="gameOverScreen">
-        <h1 id="gameOverTitle">КОНЕЦ ИГРЫ</h1>
-        <p id="gameOverDesc">Ваш город опустел или банкрот.</p>
-        <button class="restart-btn" onclick="resetGame()">Начать заново</button>
-    </div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="tooltip"></div>
 
-    <script>
-        // =========================================================
-        // 📁 1. КОНФИГУРАЦИЯ ЗДАНИЙ И ТЕКСТУР
-        // =========================================================
-        const IMAGE_FOLDER = 'PNG/'; // Измени на '', если картинки лежат в той же папке
+  <div id="toolbar-container">
+    <div id="toolbar"></div>
+  </div>
 
-        const BUILDINGS_CONFIG = [
-            { id: 1, name: 'Дом 1',     file: 'buildingTiles_001.png', cost: 100, pop: 3, cycleTime: 8,  money: 10 },
-            { id: 2, name: 'Дом 2',     file: 'buildingTiles_008.png', cost: 150, pop: 5, cycleTime: 10, money: 20 },
-            { id: 3, name: 'Офис',      file: 'buildingTiles_004.png', cost: 200, pop: 0, cycleTime: 6,  money: 35 },
-            { id: 4, name: 'Ферма',     file: 'buildingTiles_014.png', cost: 140, pop: 1, cycleTime: 12, money: 15 },
-            { id: 5, name: 'Водокачка', file: 'buildingTiles_017.png', cost: 160, pop: 0, cycleTime: 10, money: 12 },
-        ];
+  <div id="gameOverScreen">
+    <h1 id="gameOverTitle">КОНЕЦ ИГРЫ</h1>
+    <p id="gameOverDesc">Ваш город пал.</p>
+    <div id="gameOverStats"></div>
+    <button class="restart-btn" onclick="resetGame()">Начать заново</button>
+  </div>
 
-        // =========================================================
-        // ⚙️ 2. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-        // =========================================================
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+<script>
+// =========================================================
+// 📁 1. КОНФИГУРАЦИЯ ЗДАНИЙ (процедурная графика, без файлов)
+// =========================================================
+const BUILDINGS_CONFIG = [
+  { id:1, category:'house', icon:'🛖', name:'Хижина', cost:80,  pop:4,  powerReq:1, waterReq:1, foodReq:1, unlockPop:0,
+    height:30, roof:'#c0392b', wallL:'#e8c39e', wallD:'#c9a479', accent:'#fff6b0' },
+  { id:2, category:'house', icon:'🏠', name:'Дом', cost:220, pop:9, powerReq:2, waterReq:2, foodReq:2, unlockPop:8,
+    height:42, roof:'#2c7873', wallL:'#f0e4d7', wallD:'#cbb99c', accent:'#fff6b0' },
+  { id:3, category:'house', icon:'🏢', name:'Многоэтажка', cost:520, pop:22, powerReq:5, waterReq:5, foodReq:5, unlockPop:35,
+    height:64, roof:'#34495e', wallL:'#dbe3ee', wallD:'#aab4c4', accent:'#fff6b0' },
+  { id:4, category:'farm', icon:'🌾', name:'Ферма', cost:150, foodProd:9, waterReq:1, powerReq:0, unlockPop:0,
+    height:14, roof:'#8a6d3b', wallL:'#c9a24a', wallD:'#a67c2e', accent:'#e8f5a3' },
+  { id:5, category:'water', icon:'💧', name:'Водокачка', cost:170, waterProd:9, powerReq:1, unlockPop:0,
+    height:34, roof:'#1b6ca8', wallL:'#5dade2', wallD:'#2e86c1', accent:'#eaf6ff' },
+  { id:6, category:'power', icon:'⚡', name:'Электростанция', cost:300, powerProd:18, unlockPop:0,
+    height:40, roof:'#f1c40f', wallL:'#8b95a1', wallD:'#5b6672', accent:'#ffea9c' },
+  { id:7, category:'office', icon:'🏬', name:'Офис', cost:210, moneyRate:9, cycleTime:5, powerReq:3, unlockPop:10,
+    height:48, roof:'#2980b9', wallL:'#aed6f1', wallD:'#5dade2', accent:'#ffffff' },
+  { id:8, category:'factory', icon:'🏭', name:'Завод', cost:420, moneyRate:20, cycleTime:6, powerReq:7, waterReq:2, unlockPop:35,
+    height:52, roof:'#7f8c8d', wallL:'#a9b2b3', wallD:'#616a6b', accent:'#ffcf7a' },
+  { id:9, category:'park', icon:'🌳', name:'Парк', cost:90, happiness:9, unlockPop:0,
+    height:10, roof:'#2e8b3d', wallL:'#4caf50', wallD:'#357a38', accent:'#8b5a2b' },
+];
+const BULLDOZE_ID = -1;
 
-        const BASE_TILE_W = 64; 
-        const BASE_TILE_H = 32; 
-        const GRID_SIZE = 12;   
+// =========================================================
+// ⚙️ 2. ГЛОБАЛЬНОЕ СОСТОЯНИЕ
+// =========================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-        let zoom = 1.0;          
-        let rotation = 0;        
-        let gameSpeed = 1;       
+const BASE_TILE_W = 64, BASE_TILE_H = 32, GRID_SIZE = 12;
+const FOOD_CAP = 400, WATER_CAP = 400;
 
-        let offsetX = 0;
-        let offsetY = 0;
+let zoom = 1.0, rotation = 0, gameSpeed = 1;
+let offsetX = 0, offsetY = 0;
 
-        const START_RESOURCES = { money: 1000, pop: 0, food: 30, water: 30, power: 15 };
-        let resources = { ...START_RESOURCES };
+const START_RESOURCES = { money:1000, pop:0, food:120, water:120, happiness:100 };
+let resources = { ...START_RESOURCES };
+let peakPop = 0;
+let debtTimer = 0, crisisTimer = 0, ghostTimer = 0;
+let dayTime = 0; // 0..1 loop, 0 = midday
+const DAY_LENGTH = 90; // seconds per full cycle at 1x speed
+let muted = false;
+let audioCtx = null;
 
-        let grid = []; // 0 = пусто, иначе Объект здания
-        let hoveredTile = { x: -1, y: -1 };
-        let selectedBuildingId = BUILDINGS_CONFIG[0].id;
+let grid = [];
+let hoveredTile = { vx:-1, vy:-1 };
+let selectedBuildingId = BUILDINGS_CONFIG[0].id;
+let isBulldozing = false;
 
-        const loadedImages = {};
-        const citizens = [];
-        const floatingTexts = []; // Массив для всплывающей анимации текста
+const citizens = [];
+const floatingTexts = [];
+const smokeParticles = [];
 
-        let isDragging = false;
-        let dragStartX = 0, dragStartY = 0;
+let isDragging = false, dragMoved = false;
+let dragStartX = 0, dragStartY = 0;
 
-        // =========================================================
-        // 🚶 3. ЧЕЛОВЕЧКИ (УМНАЯ НАВИГАЦИЯ И ВХОД В ДОМ)
-        // =========================================================
-        class Citizen {
-            constructor(gx, gy) {
-                this.gx = gx + 0.5;
-                this.gy = gy + 0.5;
-                this.targetGx = this.gx;
-                this.targetGy = this.gy;
-                
-                this.speed = 0.025;
-                this.color = ['#FF5722', '#2196F3', '#E91E63', '#9C27B0', '#FFEB3B'][Math.floor(Math.random() * 5)];
-                this.animTimer = Math.random() * 100;
-                this.isWalking = false;
-                this.lifeTime = 6 + Math.random() * 8; // Время прогулки в секундах перед входом в дом
-                this.isHeadingHome = false;
-                this.isDead = false;
+// =========================================================
+// 🔊 SOUND (Web Audio synth, без внешних файлов)
+// =========================================================
+function beep(freq, duration, type='sine', vol=0.05){
+  if (muted) return;
+  try{
+    if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq; g.gain.value = vol;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    o.stop(audioCtx.currentTime + duration);
+  }catch(e){}
+}
+function toggleMute(){
+  muted = !muted;
+  document.getElementById('muteBtn').textContent = muted ? '🔇 Звук' : '🔊 Звук';
+  document.getElementById('muteBtn').classList.toggle('toggled', muted);
+}
 
-                this.pickNewTarget();
-            }
+// =========================================================
+// 🔔 УВЕДОМЛЕНИЯ
+// =========================================================
+function showToast(msg, kind='ok'){
+  const c = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind==='warn' ? ' warn' : kind==='info' ? ' info' : '');
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(()=> el.remove(), 4000);
+  while (c.children.length > 3) c.removeChild(c.firstChild);
+}
 
-            pickNewTarget() {
-                const currentX = Math.floor(this.gx);
-                const currentY = Math.floor(this.gy);
-                const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+// =========================================================
+// 🚶 3. ГРАЖДАНЕ
+// =========================================================
+class Citizen {
+  constructor(gx, gy){
+    this.gx = gx + 0.5; this.gy = gy + 0.5;
+    this.targetGx = this.gx; this.targetGy = this.gy;
+    this.speed = 0.025;
+    this.color = ['#FF5722','#2196F3','#E91E63','#9C27B0','#FFEB3B','#00BCD4'][Math.floor(Math.random()*6)];
+    this.animTimer = Math.random()*100;
+    this.isWalking = false;
+    this.lifeTime = 6 + Math.random()*8;
+    this.isHeadingHome = false;
+    this.isDead = false;
+    this.pickNewTarget();
+  }
+  pickNewTarget(){
+    const cx = Math.floor(this.gx), cy = Math.floor(this.gy);
+    const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+    if (!this.isHeadingHome){
+      const valid = dirs.filter(d=>{
+        const nx=cx+d.x, ny=cy+d.y;
+        return nx>=0&&nx<GRID_SIZE&&ny>=0&&ny<GRID_SIZE&&grid[ny][nx]===0;
+      });
+      if (valid.length){
+        const d = valid[Math.floor(Math.random()*valid.length)];
+        this.targetGx = cx+d.x+0.5; this.targetGy = cy+d.y+0.5;
+      }
+    } else {
+      const homes = dirs.filter(d=>{
+        const nx=cx+d.x, ny=cy+d.y;
+        return nx>=0&&nx<GRID_SIZE&&ny>=0&&ny<GRID_SIZE&&grid[ny][nx]!==0;
+      });
+      if (homes.length){
+        const d = homes[Math.floor(Math.random()*homes.length)];
+        this.targetGx = cx+d.x+0.5; this.targetGy = cy+d.y+0.5;
+      }
+    }
+  }
+  update(delta, speedMult){
+    if (speedMult===0) return;
+    this.lifeTime -= delta*speedMult;
+    if (this.lifeTime<=0 && !this.isHeadingHome){ this.isHeadingHome = true; this.pickNewTarget(); }
+    const dx=this.targetGx-this.gx, dy=this.targetGy-this.gy;
+    const dist=Math.hypot(dx,dy);
+    if (dist>0.08){
+      this.gx += (dx/dist)*this.speed*speedMult;
+      this.gy += (dy/dist)*this.speed*speedMult;
+      this.isWalking = true;
+      this.animTimer += 0.25*speedMult;
+    } else {
+      if (this.isHeadingHome){ this.isDead = true; return; }
+      this.isWalking = false;
+      if (Math.random()<0.05) this.pickNewTarget();
+    }
+  }
+  draw(vx, vy){
+    const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom;
+    const sx=(vx-vy)*(tw/2)+offsetX, sy=(vx+vy)*(th/2)+offsetY;
+    const bounce = this.isWalking ? Math.abs(Math.sin(this.animTimer))*(3*zoom) : 0;
+    const legA = this.isWalking ? Math.sin(this.animTimer)*(3*zoom) : 0;
+    ctx.save();
+    ctx.translate(sx, sy-(4*zoom)-bounce);
+    ctx.beginPath(); ctx.ellipse(0,4*zoom+bounce,4*zoom,2*zoom,0,0,Math.PI*2);
+    ctx.fillStyle="rgba(0,0,0,0.3)"; ctx.fill();
+    ctx.strokeStyle="#111"; ctx.lineWidth=Math.max(1,2*zoom);
+    ctx.beginPath();
+    ctx.moveTo(-1*zoom,0); ctx.lineTo(-1*zoom-legA,4*zoom);
+    ctx.moveTo(1*zoom,0); ctx.lineTo(1*zoom+legA,4*zoom);
+    ctx.stroke();
+    ctx.fillStyle=this.color; ctx.fillRect(-2.5*zoom,-5*zoom,5*zoom,5*zoom);
+    ctx.fillStyle="#FFCC99"; ctx.beginPath(); ctx.arc(0,-7.5*zoom,2.5*zoom,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
 
-                if (!this.isHeadingHome) {
-                    // Ищем только ПУСТЫЕ ячейки для прогулки (не ходим сквозь текстуры!)
-                    const validDirs = dirs.filter(d => {
-                        let nx = currentX + d.x;
-                        let ny = currentY + d.y;
-                        return nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && grid[ny][nx] === 0;
-                    });
+// =========================================================
+// 💸 4. ВСПЛЫВАЮЩИЙ ТЕКСТ
+// =========================================================
+function addFloatingText(x,y,text,color){
+  floatingTexts.push({x,y,text,color,alpha:1.0});
+}
+function updateAndDrawFloatingTexts(delta){
+  for (let i=floatingTexts.length-1;i>=0;i--){
+    const ft=floatingTexts[i];
+    ft.y -= 25*delta; ft.alpha -= 0.8*delta;
+    if (ft.alpha<=0){ floatingTexts.splice(i,1); continue; }
+    ctx.save();
+    ctx.globalAlpha=Math.max(0,ft.alpha);
+    ctx.fillStyle=ft.color;
+    ctx.font=`bold ${Math.max(13,16*zoom)}px 'Courier New', monospace`;
+    ctx.textAlign="center"; ctx.shadowColor="#000"; ctx.shadowBlur=4;
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.restore();
+  }
+}
 
-                    if (validDirs.length > 0) {
-                        const d = validDirs[Math.floor(Math.random() * validDirs.length)];
-                        this.targetGx = currentX + d.x + 0.5;
-                        this.targetGy = currentY + d.y + 0.5;
-                    }
-                } else {
-                    // Направляется в ближайший дом для входа
-                    const houseDirs = dirs.filter(d => {
-                        let nx = currentX + d.x;
-                        let ny = currentY + d.y;
-                        return nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && grid[ny][nx] !== 0;
-                    });
+// =========================================================
+// 🔄 5. МАТЕМАТИКА СЕТКИ
+// =========================================================
+function getVisualCoords(gx,gy){
+  if (rotation===0) return {vx:gx, vy:gy};
+  if (rotation===1) return {vx:GRID_SIZE-1-gy, vy:gx};
+  if (rotation===2) return {vx:GRID_SIZE-1-gx, vy:GRID_SIZE-1-gy};
+  if (rotation===3) return {vx:gy, vy:GRID_SIZE-1-gx};
+}
+function getRealCoords(vx,vy){
+  if (rotation===0) return {gx:vx, gy:vy};
+  if (rotation===1) return {gx:vy, gy:GRID_SIZE-1-vx};
+  if (rotation===2) return {gx:GRID_SIZE-1-vx, gy:GRID_SIZE-1-vy};
+  if (rotation===3) return {gx:GRID_SIZE-1-vy, gy:vx};
+}
+function toScreen(vx,vy){
+  const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom;
+  return { x:(vx-vy)*(tw/2)+offsetX, y:(vx+vy)*(th/2)+offsetY };
+}
+function toGrid(sx,sy){
+  const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom;
+  const ax=sx-offsetX, ay=sy-offsetY;
+  const vx=Math.floor((ax/(tw/2)+ay/(th/2))/2);
+  const vy=Math.floor((ay/(th/2)-ax/(tw/2))/2);
+  return {vx,vy};
+}
 
-                    if (houseDirs.length > 0) {
-                        const d = houseDirs[Math.floor(Math.random() * houseDirs.length)];
-                        this.targetGx = currentX + d.x + 0.5;
-                        this.targetGy = currentY + d.y + 0.5;
-                    }
-                }
-            }
+// =========================================================
+// 🎨 6. ОТРИСОВКА
+// =========================================================
+function nightFactor(){
+  // 0 = полдень (светло), 1 = полночь (темно)
+  return (1 - Math.cos(dayTime*Math.PI*2)) / 2 * 0.72;
+}
 
-            update(delta, speedMult) {
-                if (speedMult === 0) return;
+function drawTile(x,y,gx,gy){
+  const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom;
+  const shade = ((gx*7+gy*13) % 5) * 3; // лёгкая вариация травы
+  ctx.beginPath();
+  ctx.moveTo(x,y); ctx.lineTo(x+tw/2,y+th/2); ctx.lineTo(x,y+th); ctx.lineTo(x-tw/2,y+th/2);
+  ctx.closePath();
+  ctx.fillStyle = `rgb(${92-shade},${138-shade},${39-shade})`;
+  ctx.fill();
+  ctx.strokeStyle="rgba(0,0,0,0.12)"; ctx.stroke();
 
-                this.lifeTime -= delta * speedMult;
-                if (this.lifeTime <= 0 && !this.isHeadingHome) {
-                    this.isHeadingHome = true;
-                    this.pickNewTarget();
-                }
+  ctx.beginPath();
+  ctx.moveTo(x-tw/2,y+th/2); ctx.lineTo(x,y+th); ctx.lineTo(x,y+th+6*zoom); ctx.lineTo(x-tw/2,y+th/2+6*zoom);
+  ctx.fillStyle="#43661b"; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x,y+th); ctx.lineTo(x+tw/2,y+th/2); ctx.lineTo(x+tw/2,y+th/2+6*zoom); ctx.lineTo(x,y+th+6*zoom);
+  ctx.fillStyle="#334e14"; ctx.fill();
+}
 
-                const dx = this.targetGx - this.gx;
-                const dy = this.targetGy - this.gy;
-                const dist = Math.hypot(dx, dy);
+function drawBox(x,y,tw,th,h,roof,wallL,wallD){
+  ctx.fillStyle=roof;
+  ctx.beginPath();
+  ctx.moveTo(x,y-h); ctx.lineTo(x+tw/2,y+th/2-h); ctx.lineTo(x,y+th-h); ctx.lineTo(x-tw/2,y+th/2-h);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle=wallL;
+  ctx.beginPath();
+  ctx.moveTo(x-tw/2,y+th/2-h); ctx.lineTo(x,y+th-h); ctx.lineTo(x,y+th); ctx.lineTo(x-tw/2,y+th/2);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle=wallD;
+  ctx.beginPath();
+  ctx.moveTo(x,y+th-h); ctx.lineTo(x+tw/2,y+th/2-h); ctx.lineTo(x+tw/2,y+th/2); ctx.lineTo(x,y+th);
+  ctx.closePath(); ctx.fill();
+}
 
-                if (dist > 0.08) {
-                    this.gx += (dx / dist) * this.speed * speedMult;
-                    this.gy += (dy / dist) * this.speed * speedMult;
-                    this.isWalking = true;
-                    this.animTimer += 0.25 * speedMult;
-                } else {
-                    // Человечек дошел до дома -> заходит и исчезает
-                    if (this.isHeadingHome) {
-                        this.isDead = true; 
-                        return;
-                    }
+function drawWindows(x,y,tw,th,h,lit,color){
+  ctx.fillStyle = lit ? color : 'rgba(40,40,50,0.55)';
+  const wsize = 4.5*zoom;
+  // окна на левой и правой стене - приближённо
+  const spots = [
+    {ox:-tw/4, oy:th/4-h*0.62}, {ox:-tw/4-6*zoom, oy:th/4-h*0.35},
+    {ox:tw/4, oy:th/4-h*0.62}, {ox:tw/4+6*zoom, oy:th/4-h*0.35},
+  ];
+  spots.forEach(s=> ctx.fillRect(x+s.ox-wsize/2, y+s.oy-wsize/2, wsize, wsize));
+}
 
-                    this.isWalking = false;
-                    if (Math.random() < 0.05) this.pickNewTarget();
-                }
-            }
+function drawFallback(x,y,tw,th){
+  drawBox(x,y,tw,th,32*zoom,'#aaa','#888','#666');
+}
 
-            draw(vx, vy) {
-                const tw = BASE_TILE_W * zoom;
-                const th = BASE_TILE_H * zoom;
-                const screenX = (vx - vy) * (tw / 2) + offsetX;
-                const screenY = (vx + vy) * (th / 2) + offsetY;
+function drawBuildingVisual(conf, x, y, tw, th, powered, night, animPhase, bData){
+  const h = conf.height*zoom;
+  switch(conf.category){
+    case 'park': {
+      // клумба
+      ctx.fillStyle = 'rgba(60,130,60,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(x,y); ctx.lineTo(x+tw/2,y+th/2); ctx.lineTo(x,y+th); ctx.lineTo(x-tw/2,y+th/2);
+      ctx.closePath(); ctx.fill();
+      const trees = [[-10,-4],[8,2],[-2,6]];
+      trees.forEach(([ox,oy])=>{
+        const tx=x+ox*zoom, ty=y+oy*zoom;
+        ctx.fillStyle='#5a3a1e'; ctx.fillRect(tx-1.5*zoom, ty-6*zoom, 3*zoom, 8*zoom);
+        ctx.fillStyle=conf.wallL; ctx.beginPath(); ctx.arc(tx, ty-10*zoom, 7*zoom, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle=conf.wallD; ctx.beginPath(); ctx.arc(tx+2*zoom, ty-8*zoom, 5*zoom, 0, Math.PI*2); ctx.fill();
+      });
+      return 6*zoom;
+    }
+    case 'farm': {
+      ctx.fillStyle = conf.wallL;
+      ctx.beginPath();
+      ctx.moveTo(x,y); ctx.lineTo(x+tw/2,y+th/2); ctx.lineTo(x,y+th); ctx.lineTo(x-tw/2,y+th/2);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = conf.wallD; ctx.lineWidth = 1.5*zoom;
+      for (let i=-2;i<=2;i++){
+        ctx.beginPath();
+        ctx.moveTo(x-tw/2+ (i+2)*tw/5, y+th/2 - (i+2)*th/10);
+        ctx.lineTo(x + (i)*tw/10, y+th - (i)*th/20);
+        ctx.stroke();
+      }
+      drawBox(x - tw*0.28, y + th*0.15, tw*0.35, th*0.35, 16*zoom, conf.roof, conf.wallD, '#5c431f');
+      return 16*zoom;
+    }
+    case 'water': {
+      drawBox(x,y,tw,th,h,conf.roof,conf.wallL,conf.wallD);
+      ctx.fillStyle = conf.accent;
+      ctx.beginPath(); ctx.arc(x, y-h-6*zoom, 8*zoom, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = conf.roof; ctx.lineWidth = 1.5*zoom; ctx.stroke();
+      if (powered){
+        const drip = (animPhase*20)%12;
+        ctx.fillStyle = 'rgba(150,220,255,0.8)';
+        ctx.fillRect(x-1.5*zoom, y-h+drip*zoom, 3*zoom, 4*zoom);
+      }
+      return h + 12*zoom;
+    }
+    case 'power': {
+      drawBox(x,y,tw,th,h,conf.roof,conf.wallL,conf.wallD);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(x-3*zoom, y-h-14*zoom, 6*zoom, 14*zoom);
+      const blink = Math.sin(animPhase*4) > 0;
+      ctx.fillStyle = powered ? (blink ? '#4EFE83' : '#1e7d43') : '#FF5252';
+      ctx.beginPath(); ctx.arc(x, y-h-16*zoom, 3*zoom, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = conf.accent; ctx.font = `${10*zoom}px sans-serif`; ctx.textAlign='center';
+      ctx.fillText('⚡', x, y-h*0.5);
+      return h + 16*zoom;
+    }
+    case 'factory': {
+      drawBox(x,y,tw,th,h,conf.roof,conf.wallL,conf.wallD);
+      drawWindows(x,y,tw,th,h,powered && night, conf.accent);
+      ctx.fillStyle = '#555';
+      ctx.fillRect(x-tw*0.22, y-h-18*zoom, 5*zoom, 18*zoom);
+      ctx.fillRect(x+tw*0.1, y-h-24*zoom, 5*zoom, 24*zoom);
+      if (powered){
+        if (Math.random()<0.15*zoom) smokeParticles.push({x:x+tw*0.12, y:y-h-24*zoom, life:1, r:3*zoom});
+      }
+      return h + 24*zoom;
+    }
+    case 'office': {
+      drawBox(x,y,tw,th,h,conf.roof,conf.wallL,conf.wallD);
+      drawWindows(x,y,tw,th,h,true, powered ? '#fff' : 'rgba(255,120,120,0.5)');
+      return h;
+    }
+    case 'house': default: {
+      drawBox(x,y,tw,th,h,conf.roof,conf.wallL,conf.wallD);
+      drawWindows(x,y,tw,th,h, night && powered, conf.accent);
+      return h;
+    }
+  }
+}
 
-                const bounce = this.isWalking ? Math.abs(Math.sin(this.animTimer)) * (3 * zoom) : 0;
-                const legAngle = this.isWalking ? Math.sin(this.animTimer) * (3 * zoom) : 0;
+function drawBuildingUI(pos, renderH, conf, bData, powered){
+  const barW=44*zoom, barH=6*zoom;
+  const barX=pos.x-barW/2, barY=pos.y-renderH-12*zoom;
 
-                ctx.save();
-                ctx.translate(screenX, screenY - (4 * zoom) - bounce);
+  if (conf.cycleTime){
+    ctx.fillStyle="rgba(0,0,0,0.7)"; ctx.fillRect(barX,barY,barW,barH);
+    ctx.strokeStyle="#fff"; ctx.lineWidth=1; ctx.strokeRect(barX,barY,barW,barH);
+    const progress = bData.timer/bData.maxTime;
+    ctx.fillStyle = powered ? "#4EFE83" : "#888";
+    ctx.fillRect(barX+1,barY+1,Math.max(0,(barW-2)*progress),barH-2);
+  } else {
+    const dotColor = powered ? '#4EFE83' : '#FF5252';
+    ctx.fillStyle = dotColor;
+    ctx.beginPath(); ctx.arc(pos.x, barY+barH/2, 3.5*zoom, 0, Math.PI*2); ctx.fill();
+  }
 
-                // Тень
-                ctx.beginPath();
-                ctx.ellipse(0, 4 * zoom + bounce, 4 * zoom, 2 * zoom, 0, 0, Math.PI * 2);
-                ctx.fillStyle = "rgba(0,0,0,0.3)";
-                ctx.fill();
+  if (bData.residents>0){
+    ctx.fillStyle="#FFB74D";
+    ctx.font=`bold ${Math.max(10,11*zoom)}px 'Courier New', monospace`;
+    ctx.textAlign="center";
+    ctx.fillText(`👥 ${bData.residents}`, pos.x, barY-4*zoom);
+  }
+}
 
-                // Ноги
-                ctx.strokeStyle = "#111";
-                ctx.lineWidth = Math.max(1, 2 * zoom);
-                ctx.beginPath();
-                ctx.moveTo(-1 * zoom, 0); ctx.lineTo(-1 * zoom - legAngle, 4 * zoom);
-                ctx.moveTo(1 * zoom, 0);  ctx.lineTo(1 * zoom + legAngle, 4 * zoom);
-                ctx.stroke();
+function renderLoop(now){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const night = nightFactor();
+  const animPhase = (now||0)/500;
 
-                // Тело
-                ctx.fillStyle = this.color;
-                ctx.fillRect(-2.5 * zoom, -5 * zoom, 5 * zoom, 5 * zoom);
+  for (let vy=0; vy<GRID_SIZE; vy++){
+    for (let vx=0; vx<GRID_SIZE; vx++){
+      const pos = toScreen(vx,vy);
+      const real = getRealCoords(vx,vy);
+      drawTile(pos.x, pos.y, real.gx, real.gy);
 
-                // Голова
-                ctx.fillStyle = "#FFCC99";
-                ctx.beginPath();
-                ctx.arc(0, -7.5 * zoom, 2.5 * zoom, 0, Math.PI * 2);
-                ctx.fill();
+      if (vx===hoveredTile.vx && vy===hoveredTile.vy){
+        const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom;
+        ctx.fillStyle = isBulldozing ? "rgba(255,82,82,0.4)" : "rgba(255,255,255,0.4)";
+        ctx.beginPath();
+        ctx.moveTo(pos.x,pos.y); ctx.lineTo(pos.x+tw/2,pos.y+th/2); ctx.lineTo(pos.x,pos.y+th); ctx.lineTo(pos.x-tw/2,pos.y+th/2);
+        ctx.fill();
+      }
 
-                ctx.restore();
-            }
+      const bData = grid[real.gy][real.gx];
+      if (bData !== 0){
+        const conf = BUILDINGS_CONFIG.find(b=>b.id===bData.typeId);
+        let renderH = 32*zoom;
+        if (!conf){
+          drawFallback(pos.x,pos.y,BASE_TILE_W*zoom,BASE_TILE_H*zoom);
+        } else {
+          const powered = bData.powerReq>0 ? bData.powered : true;
+          renderH = drawBuildingVisual(conf, pos.x, pos.y, BASE_TILE_W*zoom, BASE_TILE_H*zoom, powered, night>0.25, animPhase, bData);
+          drawBuildingUI(pos, renderH, conf, bData, powered);
         }
+      }
 
-        // =========================================================
-        // 💸 4. ВСПЛЫВАЮЩИЙ ТЕКСТ (АНИМАЦИЯ ДЕНЕГ +$10)
-        // =========================================================
-        function addFloatingText(x, y, text, color) {
-            floatingTexts.push({
-                x: x,
-                y: y,
-                text: text,
-                color: color,
-                alpha: 1.0
-            });
+      citizens.forEach(c=>{
+        const cv = getVisualCoords(c.gx,c.gy);
+        if (Math.floor(cv.vx)===vx && Math.floor(cv.vy)===vy) c.draw(cv.vx, cv.vy);
+      });
+    }
+  }
+
+  // дым от заводов
+  for (let i=smokeParticles.length-1;i>=0;i--){
+    const s = smokeParticles[i];
+    s.y -= 12/60; s.x += 3/60; s.life -= 0.012; s.r += 0.04;
+    if (s.life<=0){ smokeParticles.splice(i,1); continue; }
+    ctx.fillStyle = `rgba(180,180,190,${s.life*0.5})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+  }
+
+  updateAndDrawFloatingTexts(0.016);
+
+  // ночное затемнение
+  if (night>0.02){
+    ctx.fillStyle = `rgba(10,10,40,${night})`;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+
+  requestAnimationFrame(renderLoop);
+}
+
+// =========================================================
+// 🎮 7. УПРАВЛЕНИЕ
+// =========================================================
+canvas.addEventListener('wheel', (e)=>{
+  e.preventDefault();
+  zoom = Math.min(Math.max(0.4, zoom*(e.deltaY<0?1.12:0.88)), 2.8);
+}, {passive:false});
+
+canvas.addEventListener('mousedown', (e)=>{
+  if (e.button===2 || e.button===1){
+    isDragging = true; dragMoved = false;
+    dragStartX = e.clientX-offsetX; dragStartY = e.clientY-offsetY;
+  } else if (e.button===0){
+    tryBuildOrBulldoze();
+  }
+});
+canvas.addEventListener('mousemove', (e)=>{
+  if (isDragging){
+    offsetX = e.clientX-dragStartX; offsetY = e.clientY-dragStartY;
+    dragMoved = true;
+  }
+  const rect = canvas.getBoundingClientRect();
+  hoveredTile = toGrid(e.clientX-rect.left, e.clientY-rect.top);
+  updateTooltip(e.clientX, e.clientY);
+});
+window.addEventListener('mouseup', ()=> isDragging=false);
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
+
+function tryBuildOrBulldoze(){
+  if (hoveredTile.vx<0||hoveredTile.vx>=GRID_SIZE||hoveredTile.vy<0||hoveredTile.vy>=GRID_SIZE) return;
+  const real = getRealCoords(hoveredTile.vx, hoveredTile.vy);
+  const cell = grid[real.gy][real.gx];
+
+  if (isBulldozing){
+    if (cell !== 0){
+      const refund = Math.floor(cell.cost*0.4);
+      resources.money += refund;
+      if (cell.residents>0){
+        resources.pop -= cell.residents;
+        for (let i=citizens.length-1;i>=0 && cell.residents>0;i--){
+          citizens.splice(i,1); cell.residents--;
         }
+      }
+      grid[real.gy][real.gx] = 0;
+      addFloatingText(toScreen(hoveredTile.vx,hoveredTile.vy).x, toScreen(hoveredTile.vx,hoveredTile.vy).y-30*zoom, `+$${refund}`, '#FFD54F');
+      beep(300,0.12,'square',0.05);
+      updateHUD();
+    }
+    return;
+  }
 
-        function updateAndDrawFloatingTexts(delta) {
-            for (let i = floatingTexts.length - 1; i >= 0; i--) {
-                let ft = floatingTexts[i];
-                ft.y -= 25 * delta;     // Движется вверх
-                ft.alpha -= 0.8 * delta; // Плавно исчезает
+  if (cell !== 0) return;
+  const b = BUILDINGS_CONFIG.find(item=>item.id===selectedBuildingId);
+  if (!b) return;
+  if (resources.pop < b.unlockPop){
+    showToast(`Нужно ${b.unlockPop} жителей, чтобы построить «${b.name}»`, 'warn');
+    beep(150,0.15,'sawtooth',0.05);
+    return;
+  }
+  if (resources.money < b.cost){
+    showToast('Недостаточно денег!', 'warn');
+    beep(150,0.15,'sawtooth',0.05);
+    return;
+  }
+  resources.money -= b.cost;
+  resources.pop += (b.pop||0);
+  peakPop = Math.max(peakPop, resources.pop);
 
-                if (ft.alpha <= 0) {
-                    floatingTexts.splice(i, 1);
-                    continue;
-                }
+  grid[real.gy][real.gx] = {
+    typeId:b.id, timer:0, maxTime:b.cycleTime||0, cost:b.cost,
+    residents:b.pop||0, powerReq:b.powerReq||0, powered:true,
+  };
+  beep(600,0.12,'sine',0.05);
+  updateHUD();
+}
 
-                ctx.save();
-                ctx.globalAlpha = Math.max(0, ft.alpha);
-                ctx.fillStyle = ft.color;
-                ctx.font = `bold ${Math.max(13, 16 * zoom)}px 'Courier New', monospace`;
-                ctx.textAlign = "center";
-                ctx.shadowColor = "#000";
-                ctx.shadowBlur = 4;
-                ctx.fillText(ft.text, ft.x, ft.y);
-                ctx.restore();
-            }
+function updateTooltip(clientX, clientY){
+  const tt = document.getElementById('tooltip');
+  if (hoveredTile.vx<0||hoveredTile.vx>=GRID_SIZE||hoveredTile.vy<0||hoveredTile.vy>=GRID_SIZE){
+    tt.style.display='none'; return;
+  }
+  const real = getRealCoords(hoveredTile.vx, hoveredTile.vy);
+  const cell = grid[real.gy][real.gx];
+  if (cell === 0){ tt.style.display='none'; return; }
+  const conf = BUILDINGS_CONFIG.find(b=>b.id===cell.typeId);
+  if (!conf){ tt.style.display='none'; return; }
+  let lines = [`<b>${conf.icon} ${conf.name}</b>`];
+  if (cell.residents) lines.push(`Жителей: ${cell.residents}`);
+  if (conf.foodProd) lines.push(`Еда: +${conf.foodProd}/сек`);
+  if (conf.waterProd) lines.push(`Вода: +${conf.waterProd}/сек`);
+  if (conf.powerProd) lines.push(`Энергия: +${conf.powerProd}`);
+  if (conf.powerReq) lines.push(`Потребление энергии: ${conf.powerReq}${cell.powered?'':' ⚠️ нет питания'}`);
+  if (conf.moneyRate) lines.push(`Доход: $${conf.moneyRate}/цикл`);
+  tt.innerHTML = lines.join('<br>');
+  tt.style.display='block';
+  tt.style.left = (clientX+14)+'px';
+  tt.style.top = (clientY+14)+'px';
+}
+
+function rotateMap(){ rotation=(rotation+1)%4; }
+function changeZoom(d){ zoom=Math.min(Math.max(0.4, zoom+d), 2.8); }
+function setSpeed(spd, btn){
+  gameSpeed = spd;
+  document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// =========================================================
+// ⏱️ 8. ЭКОНОМИКА И ИГРОВОЙ ЦИКЛ
+// =========================================================
+let lastTime = performance.now();
+let spawnTimer = 0;
+let statTimer = 0;
+
+function computeTotals(){
+  let foodProd=0, waterProd=0, powerProd=0, powerReq=0, foodReq=0, waterReq=0, happinessBonus=0, buildingCount=0;
+  for (let y=0;y<GRID_SIZE;y++){
+    for (let x=0;x<GRID_SIZE;x++){
+      const cell = grid[y][x];
+      if (cell===0) continue;
+      buildingCount++;
+      const conf = BUILDINGS_CONFIG.find(b=>b.id===cell.typeId);
+      if (!conf) continue;
+      if (conf.foodProd) foodProd += conf.foodProd;
+      if (conf.waterProd) waterProd += conf.waterProd;
+      if (conf.powerProd) powerProd += conf.powerProd;
+      if (conf.powerReq) powerReq += conf.powerReq;
+      if (conf.foodReq) foodReq += conf.foodReq;
+      if (conf.waterReq) waterReq += conf.waterReq;
+      if (conf.happiness) happinessBonus += conf.happiness;
+    }
+  }
+  return {foodProd,waterProd,powerProd,powerReq,foodReq,waterReq,happinessBonus,buildingCount};
+}
+
+let lastFoodNet=0, lastWaterNet=0;
+
+function gameTick(now){
+  let delta = (now-lastTime)/1000;
+  if (delta>0.25) delta=0.25;
+  lastTime = now;
+
+  if (gameSpeed>0){
+    dayTime += (delta*gameSpeed)/DAY_LENGTH;
+    if (dayTime>1) dayTime -= 1;
+
+    for (let i=citizens.length-1;i>=0;i--){
+      citizens[i].update(delta, gameSpeed);
+      if (citizens[i].isDead) citizens.splice(i,1);
+    }
+
+    const totals = computeTotals();
+    const powerRatio = totals.powerReq>0 ? Math.min(1, totals.powerProd/totals.powerReq) : 1;
+
+    // распределяем питание по зданиям (упрощённо: все получают одинаковый ratio)
+    for (let y=0;y<GRID_SIZE;y++){
+      for (let x=0;x<GRID_SIZE;x++){
+        const cell = grid[y][x];
+        if (cell===0) continue;
+        cell.powered = cell.powerReq===0 || powerRatio>=0.999 || Math.random()<powerRatio;
+      }
+    }
+
+    const foodNet = totals.foodProd - totals.foodReq;
+    const waterNet = totals.waterProd - totals.waterReq;
+    lastFoodNet = foodNet; lastWaterNet = waterNet;
+    resources.food = Math.min(FOOD_CAP, Math.max(0, resources.food + foodNet*delta*gameSpeed));
+    resources.water = Math.min(WATER_CAP, Math.max(0, resources.water + waterNet*delta*gameSpeed));
+
+    // упадок счастья при дефиците
+    let happinessTarget = 60 + totals.happinessBonus*1.2 + powerRatio*15;
+    if (totals.foodReq>0 && resources.food<=0.5) happinessTarget -= 35;
+    if (totals.waterReq>0 && resources.water<=0.5) happinessTarget -= 35;
+    happinessTarget = Math.max(0, Math.min(100, happinessTarget));
+    resources.happiness += (happinessTarget - resources.happiness) * Math.min(1, delta*gameSpeed*0.5);
+
+    // содержание зданий (небольшой налог)
+    resources.money -= totals.buildingCount*0.04*delta*gameSpeed;
+
+    // доход от офисов/заводов
+    for (let y=0;y<GRID_SIZE;y++){
+      for (let x=0;x<GRID_SIZE;x++){
+        const cell = grid[y][x];
+        if (cell===0 || !cell.maxTime) continue;
+        const conf = BUILDINGS_CONFIG.find(b=>b.id===cell.typeId);
+        if (!conf) continue;
+        if (!cell.powered) continue;
+        cell.timer += delta*gameSpeed;
+        if (cell.timer>=cell.maxTime){
+          cell.timer = 0;
+          resources.money += conf.moneyRate;
+          const vis = getVisualCoords(x,y);
+          const pos = toScreen(vis.vx, vis.vy);
+          addFloatingText(pos.x, pos.y-40*zoom, `+$${conf.moneyRate}`, '#4EFE83');
         }
+      }
+    }
 
-        // =========================================================
-        // 🔄 5. МАТЕМАТИКА ТРАНСФОРМАЦИИ СЕТКИ
-        // =========================================================
-        function getVisualCoords(gx, gy) {
-            if (rotation === 0) return { vx: gx, vy: gy };
-            if (rotation === 1) return { vx: GRID_SIZE - 1 - gy, vy: gx };
-            if (rotation === 2) return { vx: GRID_SIZE - 1 - gx, vy: GRID_SIZE - 1 - gy };
-            if (rotation === 3) return { vx: gy, vy: GRID_SIZE - 1 - gx };
+    // эмиграция при низком счастье
+    if (resources.happiness < 30){
+      crisisTimer += delta*gameSpeed;
+      if (crisisTimer > 2){
+        crisisTimer = 0;
+        emigrateOne();
+      }
+    } else {
+      crisisTimer = Math.max(0, crisisTimer - delta*gameSpeed*0.5);
+    }
+
+    // спавн горожан
+    spawnTimer += delta*gameSpeed;
+    if (spawnTimer>=3.2){
+      spawnTimer = 0;
+      spawnCitizenFromHouse();
+    }
+
+    // условия поражения
+    if (resources.money < -30){
+      debtTimer += delta*gameSpeed;
+      if (debtTimer>8) triggerGameOver('bankrupt');
+    } else {
+      debtTimer = Math.max(0, debtTimer - delta*gameSpeed);
+    }
+    if (peakPop>6 && resources.pop<=0){
+      ghostTimer += delta*gameSpeed;
+      if (ghostTimer>5) triggerGameOver('ghost');
+    } else {
+      ghostTimer = 0;
+    }
+
+    // периодические уведомления
+    statTimer += delta*gameSpeed;
+    if (statTimer>1){
+      statTimer=0;
+      updateHUD();
+      checkMilestones();
+    }
+  }
+
+  requestAnimationFrame(gameTick);
+}
+
+let lastMilestone = 0;
+function checkMilestones(){
+  const milestones = [10,20,35,50,75,100,150];
+  for (const m of milestones){
+    if (resources.pop>=m && lastMilestone<m){
+      lastMilestone = m;
+      showToast(`🎉 Город достиг ${m} жителей!`, 'info');
+      beep(700,0.2,'triangle',0.06);
+    }
+  }
+  if (resources.happiness<25 && Math.random()<0.3){
+    showToast('⚠️ Люди недовольны! Не хватает еды или воды.', 'warn');
+  }
+}
+
+function emigrateOne(){
+  const houses = [];
+  for (let y=0;y<GRID_SIZE;y++) for (let x=0;x<GRID_SIZE;x++){
+    const c = grid[y][x];
+    if (c!==0 && c.residents>0) houses.push(c);
+  }
+  if (!houses.length) return;
+  const h = houses[Math.floor(Math.random()*houses.length)];
+  h.residents--;
+  resources.pop = Math.max(0, resources.pop-1);
+  if (citizens.length>0) citizens.pop();
+  showToast('😞 Одна семья покинула город из-за нехватки ресурсов', 'warn');
+}
+
+function spawnCitizenFromHouse(){
+  if (citizens.length>=resources.pop) return;
+  for (let y=0;y<GRID_SIZE;y++){
+    for (let x=0;x<GRID_SIZE;x++){
+      const cell = grid[y][x];
+      if (cell!==0 && cell.residents>0){
+        const dirs=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+        for (const d of dirs){
+          const nx=x+d.x, ny=y+d.y;
+          if (nx>=0&&nx<GRID_SIZE&&ny>=0&&ny<GRID_SIZE&&grid[ny][nx]===0){
+            citizens.push(new Citizen(nx,ny));
+            return;
+          }
         }
+      }
+    }
+  }
+}
 
-        function getRealCoords(vx, vy) {
-            if (rotation === 0) return { gx: vx, gy: vy };
-            if (rotation === 1) return { gx: vy, gy: GRID_SIZE - 1 - vx };
-            if (rotation === 2) return { gx: GRID_SIZE - 1 - vx, gy: GRID_SIZE - 1 - vy };
-            if (rotation === 3) return { gx: GRID_SIZE - 1 - vy, gy: vx };
-        }
+function trendArrow(net){
+  if (net>0.15) return '<span class="trend-up">▲</span>';
+  if (net<-0.15) return '<span class="trend-down">▼</span>';
+  return '<span class="trend-flat">▬</span>';
+}
 
-        function toScreen(vx, vy) {
-            const tw = BASE_TILE_W * zoom;
-            const th = BASE_TILE_H * zoom;
-            return {
-                x: (vx - vy) * (tw / 2) + offsetX,
-                y: (vx + vy) * (th / 2) + offsetY
-            };
-        }
+function updateHUD(){
+  document.getElementById('valMoney').innerText = Math.floor(resources.money);
+  document.getElementById('valPop').innerText = resources.pop;
+  document.getElementById('valFood').innerText = Math.floor(resources.food);
+  document.getElementById('capFood').innerText = FOOD_CAP;
+  document.getElementById('valWater').innerText = Math.floor(resources.water);
+  document.getElementById('capWater').innerText = WATER_CAP;
+  document.getElementById('trendFood').outerHTML = `<span id="trendFood">${trendArrow(lastFoodNet).replace(/<\/?span[^>]*>/g,'')}</span>`;
+  document.getElementById('trendFood').className = lastFoodNet>0.15?'trend-up':lastFoodNet<-0.15?'trend-down':'trend-flat';
+  document.getElementById('trendWater').className = lastWaterNet>0.15?'trend-up':lastWaterNet<-0.15?'trend-down':'trend-flat';
+  const totals = computeTotals();
+  document.getElementById('valPowerProd').innerText = totals.powerProd;
+  document.getElementById('valPowerReq').innerText = totals.powerReq;
+  const happyPct = Math.round(resources.happiness);
+  document.getElementById('happyPct').innerText = happyPct;
+  document.getElementById('happyFill').style.width = happyPct+'%';
+  renderToolbarLocks();
+}
 
-        function toGrid(screenX, screenY) {
-            const tw = BASE_TILE_W * zoom;
-            const th = BASE_TILE_H * zoom;
-            let adjX = screenX - offsetX;
-            let adjY = screenY - offsetY;
-            let vx = Math.floor((adjX / (tw / 2) + adjY / (th / 2)) / 2);
-            let vy = Math.floor((adjY / (th / 2) - adjX / (tw / 2)) / 2);
-            return { vx, vy };
-        }
+function renderToolbarLocks(){
+  document.querySelectorAll('.build-btn[data-id]').forEach(btn=>{
+    const id = parseInt(btn.dataset.id);
+    const conf = BUILDINGS_CONFIG.find(b=>b.id===id);
+    const locked = resources.pop < conf.unlockPop;
+    btn.classList.toggle('locked', locked);
+  });
+}
 
-        // =========================================================
-        // 🎨 6. ОТРИСОВКА И РЕНДЕР
-        // =========================================================
-        function drawTile(x, y) {
-            const tw = BASE_TILE_W * zoom;
-            const th = BASE_TILE_H * zoom;
+function triggerGameOver(reason){
+  gameSpeed = 0;
+  const title = document.getElementById('gameOverTitle');
+  const desc = document.getElementById('gameOverDesc');
+  if (reason==='bankrupt'){
+    title.innerText = 'БАНКРОТСТВО';
+    desc.innerText = 'Город потратил больше денег, чем заработал, и казна ушла в глубокий минус.';
+  } else {
+    title.innerText = 'ГОРОД ОПУСТЕЛ';
+    desc.innerText = 'Все жители покинули город из-за нехватки ресурсов и низкого настроения.';
+  }
+  document.getElementById('gameOverStats').innerText = `Максимум жителей: ${peakPop}  •  Итог: $${Math.floor(resources.money)}`;
+  document.getElementById('gameOverScreen').style.display = 'flex';
+  beep(220,0.3,'sawtooth',0.06);
+  setTimeout(()=>beep(160,0.4,'sawtooth',0.06), 150);
+}
 
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + tw/2, y + th/2);
-            ctx.lineTo(x, y + th);
-            ctx.lineTo(x - tw/2, y + th/2);
-            ctx.closePath();
-            ctx.fillStyle = "#5c8a27";
-            ctx.fill();
-            ctx.strokeStyle = "rgba(0,0,0,0.12)";
-            ctx.stroke();
+function resetGame(){
+  resources = { ...START_RESOURCES };
+  peakPop = 0; debtTimer=0; crisisTimer=0; ghostTimer=0; lastMilestone=0; dayTime=0.15;
+  grid = Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0));
+  citizens.length = 0; floatingTexts.length = 0; smokeParticles.length = 0;
+  gameSpeed = 1;
+  document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.speed-btn')[1].classList.add('active');
+  updateHUD();
+  document.getElementById('gameOverScreen').style.display='none';
+}
 
-            ctx.beginPath();
-            ctx.moveTo(x - tw/2, y + th/2);
-            ctx.lineTo(x, y + th);
-            ctx.lineTo(x, y + th + 6 * zoom);
-            ctx.lineTo(x - tw/2, y + th/2 + 6 * zoom);
-            ctx.fillStyle = "#43661b";
-            ctx.fill();
+// =========================================================
+// 🚀 9. ИНИЦИАЛИЗАЦИЯ
+// =========================================================
+function initToolbar(){
+  const toolbar = document.getElementById('toolbar');
+  BUILDINGS_CONFIG.forEach(b=>{
+    const btn = document.createElement('div');
+    btn.className = `build-btn ${b.id===selectedBuildingId?'active':''}`;
+    btn.dataset.id = b.id;
+    btn.title = `${b.name} — стоимость $${b.cost}` + (b.unlockPop? ` (открывается при ${b.unlockPop} жителях)`:'');
+    btn.onclick = ()=>{
+      if (btn.classList.contains('locked')){
+        showToast(`Нужно ${b.unlockPop} жителей`, 'warn');
+        return;
+      }
+      selectedBuildingId = b.id; isBulldozing = false;
+      document.querySelectorAll('.build-btn').forEach(el=>el.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    btn.innerHTML = `
+      <div class="btn-icon">${b.icon}</div>
+      <div class="btn-name">${b.name}</div>
+      <div class="btn-cost">$${b.cost}</div>
+      ${b.unlockPop? `<div class="lock-badge">🔒${b.unlockPop}</div>`:''}
+    `;
+    toolbar.appendChild(btn);
+  });
 
-            ctx.beginPath();
-            ctx.moveTo(x, y + th);
-            ctx.lineTo(x + tw/2, y + th/2);
-            ctx.lineTo(x + tw/2, y + th/2 + 6 * zoom);
-            ctx.lineTo(x, y + th + 6 * zoom);
-            ctx.fillStyle = "#334e14";
-            ctx.fill();
-        }
+  const bulldozeBtn = document.createElement('div');
+  bulldozeBtn.className = 'build-btn bulldoze';
+  bulldozeBtn.title = 'Снести здание (возврат 40% стоимости)';
+  bulldozeBtn.innerHTML = `<div class="btn-icon">💥</div><div class="btn-name">Снести</div><div class="btn-cost">40%</div>`;
+  bulldozeBtn.onclick = ()=>{
+    isBulldozing = true;
+    document.querySelectorAll('.build-btn').forEach(el=>el.classList.remove('active'));
+    bulldozeBtn.classList.add('active');
+  };
+  toolbar.appendChild(bulldozeBtn);
+}
 
-        function drawFallbackBuilding(x, y) {
-            const tw = BASE_TILE_W * zoom;
-            const th = BASE_TILE_H * zoom;
-            let h = 35 * zoom;
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctx.imageSmoothingEnabled = false;
+  offsetX = canvas.width/2;
+  offsetY = canvas.height/3;
+}
 
-            ctx.fillStyle = "#aaaaaa";
-            ctx.beginPath();
-            ctx.moveTo(x, y - h);
-            ctx.lineTo(x + tw/2, y + th/2 - h);
-            ctx.lineTo(x, y + th - h);
-            ctx.lineTo(x - tw/2, y + th/2 - h);
-            ctx.fill();
+function initApp(){
+  initToolbar();
+  resetGame();
+  resizeCanvas();
+  requestAnimationFrame(renderLoop);
+  requestAnimationFrame(gameTick);
+  showToast('Добро пожаловать! Стройте дома, фермы и электростанции 🏙️', 'info');
+}
 
-            ctx.fillStyle = "#888888";
-            ctx.beginPath();
-            ctx.moveTo(x - tw/2, y + th/2 - h);
-            ctx.lineTo(x, y + th - h);
-            ctx.lineTo(x, y + th);
-            ctx.lineTo(x - tw/2, y + th/2);
-            ctx.fill();
-
-            ctx.fillStyle = "#666666";
-            ctx.beginPath();
-            ctx.moveTo(x, y + th - h);
-            ctx.lineTo(x + tw/2, y + th/2 - h);
-            ctx.lineTo(x + tw/2, y + th/2);
-            ctx.lineTo(x, y + th);
-            ctx.fill();
-        }
-
-        // Отрисовка полоски времени и жильцов над зданием
-        function drawBuildingUI(pos, renderH, bData) {
-            const tw = BASE_TILE_W * zoom;
-            const barW = 44 * zoom;
-            const barH = 6 * zoom;
-            const barX = pos.x - barW / 2;
-            const barY = pos.y - renderH - 12 * zoom;
-
-            // 1. Полоска прогресса (Progress Bar)
-            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-            ctx.fillRect(barX, barY, barW, barH);
-            ctx.strokeStyle = "#fff";
-            ctx.lineWidth = 1;
-            ctx.strokeRect(barX, barY, barW, barH);
-
-            const progress = bData.timer / bData.maxTime;
-            ctx.fillStyle = "#4EFE83";
-            ctx.fillRect(barX + 1, barY + 1, Math.max(0, (barW - 2) * progress), barH - 2);
-
-            // 2. Иконка количества жильцов
-            ctx.fillStyle = "#FFB74D";
-            ctx.font = `bold ${Math.max(10, 11 * zoom)}px 'Courier New', monospace`;
-            ctx.textAlign = "center";
-            ctx.fillText(`👥 ${bData.residents}`, pos.x, barY - 4 * zoom);
-        }
-
-        function renderLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            for (let vy = 0; vy < GRID_SIZE; vy++) {
-                for (let vx = 0; vx < GRID_SIZE; vx++) {
-                    let pos = toScreen(vx, vy);
-                    let real = getRealCoords(vx, vy);
-
-                    drawTile(pos.x, pos.y);
-
-                    if (vx === hoveredTile.vx && vy === hoveredTile.vy) {
-                        const tw = BASE_TILE_W * zoom;
-                        const th = BASE_TILE_H * zoom;
-                        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-                        ctx.beginPath();
-                        ctx.moveTo(pos.x, pos.y);
-                        ctx.lineTo(pos.x + tw/2, pos.y + th/2);
-                        ctx.lineTo(pos.x, pos.y + th);
-                        ctx.lineTo(pos.x - tw/2, pos.y + th/2);
-                        ctx.fill();
-                    }
-
-                    let bData = grid[real.gy][real.gx];
-                    if (bData !== 0) {
-                        let conf = BUILDINGS_CONFIG.find(item => item.id === bData.typeId);
-                        let img = loadedImages[bData.typeId];
-                        let renderH = 35 * zoom;
-
-                        if (!conf || conf.isBroken || !img.complete || img.naturalWidth === 0) {
-                            drawFallbackBuilding(pos.x, pos.y);
-                        } else {
-                            const tw = BASE_TILE_W * zoom;
-                            const th = BASE_TILE_H * zoom;
-                            let renderW = tw; 
-                            renderH = img.height * (renderW / img.width); 
-
-                            ctx.drawImage(img, pos.x - renderW / 2, pos.y - renderH + th, renderW, renderH);
-                        }
-
-                        // Рисуем Таймер-бар и Кол-во людей над зданием
-                        drawBuildingUI(pos, renderH, bData);
-                    }
-
-                    citizens.forEach(c => {
-                        let cVis = getVisualCoords(c.gx, c.gy);
-                        if (Math.floor(cVis.vx) === vx && Math.floor(cVis.vy) === vy) {
-                            c.draw(cVis.vx, cVis.vy);
-                        }
-                    });
-                }
-            }
-
-            // Отрисовка всплывающей анимации +$10
-            updateAndDrawFloatingTexts(0.016);
-
-            requestAnimationFrame(renderLoop);
-        }
-
-        // =========================================================
-        // 🎮 7. ВЗАИМОДЕЙСТВИЕ (КЛИКИ И ЗУМ)
-        // =========================================================
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            let zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
-            zoom = Math.min(Math.max(0.4, zoom * zoomFactor), 2.8);
-        }, { passive: false });
-
-        canvas.addEventListener('mousedown', (e) => {
-            if (e.button === 2 || e.button === 1) {
-                isDragging = true;
-                dragStartX = e.clientX - offsetX;
-                dragStartY = e.clientY - offsetY;
-            } else if (e.button === 0) {
-                if (hoveredTile.vx >= 0 && hoveredTile.vx < GRID_SIZE && hoveredTile.vy >= 0 && hoveredTile.vy < GRID_SIZE) {
-                    let real = getRealCoords(hoveredTile.vx, hoveredTile.vy);
-                    if (grid[real.gy][real.gx] === 0) {
-                        let b = BUILDINGS_CONFIG.find(item => item.id === selectedBuildingId);
-                        if (b && resources.money >= b.cost) {
-                            resources.money -= b.cost;
-                            resources.pop += b.pop;
-
-                            // Создаем объект построенного здания
-                            grid[real.gy][real.gx] = {
-                                typeId: b.id,
-                                timer: 0,
-                                maxTime: b.cycleTime,
-                                money: b.money,
-                                residents: b.pop
-                            };
-
-                            updateHUD();
-                        }
-                    }
-                }
-            }
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                offsetX = e.clientX - dragStartX;
-                offsetY = e.clientY - dragStartY;
-            }
-            const rect = canvas.getBoundingClientRect();
-            hoveredTile = toGrid(e.clientX - rect.left, e.clientY - rect.top);
-        });
-
-        window.addEventListener('mouseup', () => isDragging = false);
-        canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-        function rotateMap() { rotation = (rotation + 1) % 4; }
-        function changeZoom(delta) { zoom = Math.min(Math.max(0.4, zoom + delta), 2.8); }
-        function setSpeed(spd, btn) {
-            gameSpeed = spd;
-            document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
-
-        // =========================================================
-        // ⏱️ 8. ИГРОВОЙ ЦИКЛ, ТАЙМЕРЫ И ЭКОНОМИКА
-        // =========================================================
-        let lastTime = performance.now();
-        let spawnTimer = 0;
-
-        function gameTick(now) {
-            let delta = (now - lastTime) / 1000;
-            lastTime = now;
-
-            if (gameSpeed > 0) {
-                // 1. Обновляем человечков и убираем зашедших в дом
-                for (let i = citizens.length - 1; i >= 0; i--) {
-                    citizens[i].update(delta, gameSpeed);
-                    if (citizens[i].isDead) citizens.splice(i, 1);
-                }
-
-                // 2. Таймеры зданий (Заполнение полоски + Начисление $10)
-                for (let y = 0; y < GRID_SIZE; y++) {
-                    for (let x = 0; x < GRID_SIZE; x++) {
-                        let bData = grid[y][x];
-                        if (bData !== 0) {
-                            bData.timer += delta * gameSpeed;
-
-                            if (bData.timer >= bData.maxTime) {
-                                bData.timer = 0;
-                                resources.money += bData.money;
-
-                                // Анимация всплывающих денег +$10 над зданием
-                                let vis = getVisualCoords(x, y);
-                                let pos = toScreen(vis.vx, vis.vy);
-                                addFloatingText(pos.x, pos.y - 40 * zoom, `+$${bData.money}`, "#4EFE83");
-                                updateHUD();
-                            }
-                        }
-                    }
-                }
-
-                // 3. Периодический спавн человечков из жилых домов на улицу
-                spawnTimer += delta * gameSpeed;
-                if (spawnTimer >= 3.5) {
-                    spawnTimer = 0;
-                    spawnCitizenFromHouse();
-                }
-            }
-
-            requestAnimationFrame(gameTick);
-        }
-
-        function spawnCitizenFromHouse() {
-            if (citizens.length >= resources.pop) return;
-
-            for (let y = 0; y < GRID_SIZE; y++) {
-                for (let x = 0; x < GRID_SIZE; x++) {
-                    let bData = grid[y][x];
-                    if (bData !== 0 && bData.residents > 0) {
-                        // Ищем соседнюю пустую клетку для спавна
-                        const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
-                        for (let d of dirs) {
-                            let nx = x + d.x;
-                            let ny = y + d.y;
-                            if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && grid[ny][nx] === 0) {
-                                citizens.push(new Citizen(nx, ny));
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        function updateHUD() {
-            document.getElementById('valMoney').innerText = resources.money;
-            document.getElementById('valPop').innerText = resources.pop;
-            document.getElementById('valFood').innerText = resources.food;
-            document.getElementById('valWater').innerText = resources.water;
-            document.getElementById('valPower').innerText = resources.power;
-        }
-
-        function resetGame() {
-            resources = { ...START_RESOURCES };
-            grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
-            citizens.length = 0;
-            floatingTexts.length = 0;
-            
-            updateHUD();
-            document.getElementById('gameOverScreen').style.display = "none";
-        }
-
-        // =========================================================
-        // 🚀 9. ИНИЦИАЛИЗАЦИЯ ПРИ ЗАПУСКЕ
-        // =========================================================
-        function initApp() {
-            const toolbar = document.getElementById('toolbar');
-
-            BUILDINGS_CONFIG.forEach(b => {
-                const img = new Image();
-                img.src = `${IMAGE_FOLDER}${b.file}`;
-                img.onerror = () => { b.isBroken = true; };
-                loadedImages[b.id] = img;
-
-                const btn = document.createElement('div');
-                btn.className = `build-btn ${b.id === selectedBuildingId ? 'active' : ''}`;
-                btn.onclick = () => {
-                    selectedBuildingId = b.id;
-                    document.querySelectorAll('.build-btn').forEach(el => el.classList.remove('active'));
-                    btn.classList.add('active');
-                };
-                btn.innerHTML = `
-                    <img src="${IMAGE_FOLDER}${b.file}" onerror="this.style.display='none'">
-                    <div class="btn-name">${b.name}</div>
-                    <div class="btn-cost">$${b.cost}</div>
-                `;
-                toolbar.appendChild(btn);
-            });
-
-            resetGame();
-            resizeCanvas();
-            requestAnimationFrame(renderLoop);
-            requestAnimationFrame(gameTick);
-        }
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            ctx.imageSmoothingEnabled = false;
-            offsetX = canvas.width / 2;
-            offsetY = canvas.height / 3;
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        window.onload = initApp;
-    </script>
+window.addEventListener('resize', resizeCanvas);
+window.onload = initApp;
+</script>
 </body>
 </html>
