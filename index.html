@@ -1,1403 +1,1413 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel City Builder - Advanced Logic</title>
-    <style>
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #12121a;
-            font-family: 'Courier New', Courier, monospace;
-            color: #fff;
-            user-select: none;
-            touch-action: none;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Pixel City Builder</title>
+<style>
+  :root{
+    --bg-deep:#0b0f16;
+    --bg-panel:#141a24;
+    --bg-panel-alt:#1b2330;
+    --border-soft:#2a3344;
+    --text-main:#eef1f7;
+    --text-dim:#8b93a7;
+    --gold:#f4b942;
+    --mint:#49dd8e;
+    --coral:#fb6a5b;
+    --sky:#55c5e6;
+    --lilac:#c79bf2;
+    --radius:12px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0; overflow:hidden; background:var(--bg-deep);
+    font-family:'Rubik',system-ui,-apple-system,'Segoe UI',sans-serif;
+    color:var(--text-main); user-select:none; touch-action:none;
+  }
+  button{ font-family:inherit; touch-action:manipulation; }
+  #appRoot{ height:100dvh; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-        #gameCanvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            cursor: grab;
-        }
-        #gameCanvas:active {
-            cursor: grabbing;
-        }
+  /* ============ HUD (top, in normal flow) ============ */
+  #hud{
+    flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+    gap:6px; background:linear-gradient(180deg,#171d29,#11151d);
+    border-bottom:2px solid var(--border-soft);
+    padding:6px 8px; padding-top:calc(6px + env(safe-area-inset-top));
+    position:relative; z-index:30;
+  }
+  .resource{
+    font-size:clamp(11px,3vw,13px); font-weight:700; display:flex; align-items:center; gap:4px;
+    background:#1d2432; padding:5px 8px; border-radius:8px; border:1px solid #303c50;
+    transition:box-shadow .2s,border-color .2s; white-space:nowrap;
+  }
+  .resource.warn{ border-color:var(--coral); box-shadow:0 0 8px rgba(251,106,91,.55); animation:pulseWarn 1s infinite; }
+  @keyframes pulseWarn{ 0%,100%{opacity:1;} 50%{opacity:.55;} }
+  .res-ic{ font-size:13px; }
+  .rate-arrow{ font-size:10px; margin-left:1px; color:var(--text-dim); }
+  .res-money{ color:var(--gold); } .res-pop{ color:#ffb74d; } .res-food{ color:var(--coral); }
+  .res-water{ color:var(--sky); } .res-power{ color:#ffd54f; } .res-happy{ color:#ff8ad8; }
+  .res-time{ color:var(--lilac); }
+  #hudBtn{
+    font-size:15px; background:#1d2432; border:1px solid #303c50; color:var(--text-main);
+    width:30px;height:30px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  #hudBtn:hover{ border-color:var(--mint); }
+  #goalBar{
+    flex-basis:100%; text-align:center; font-size:clamp(10px,2.6vw,12px); color:var(--gold);
+    opacity:.95; padding-top:2px;
+  }
 
-        #nightOverlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            mix-blend-mode: multiply;
-            transition: background 0.5s linear;
-            z-index: 5;
-        }
+  /* ============ Settings dropdown ============ */
+  #settingsDropdown{
+    position:absolute; top:calc(100% + 6px); right:8px; z-index:35;
+    background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:10px;
+    padding:10px; display:flex; flex-direction:column; gap:8px; width:190px;
+    box-shadow:0 10px 24px rgba(0,0,0,.55);
+  }
+  #settingsDropdown.hidden{ display:none; }
+  .set-row{ display:flex; gap:6px; align-items:center; justify-content:space-between; }
+  .set-label{ font-size:12px; color:var(--text-dim); }
+  .ctrl-btn{
+    background:#202838; border:1px solid #37435a; color:var(--text-main); padding:7px 10px;
+    border-radius:7px; cursor:pointer; font-size:12px; font-weight:700; flex:1;
+  }
+  .ctrl-btn:hover{ border-color:var(--mint); }
+  .speed-group{ display:flex; gap:4px; flex:1; }
+  .speed-btn{ background:#202838; border:1px solid #37435a; color:#aaa; padding:6px 4px; border-radius:6px; cursor:pointer; font-size:11px; font-weight:700; flex:1; }
+  .speed-btn.active{ background:var(--gold); color:#111; border-color:var(--gold); }
+  .set-checkbox{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); }
 
-        /* Верхняя панель ресурсов */
-        #hud {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(18, 18, 26, 0.92);
-            padding: 10px 15px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 2px solid #333348;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-            z-index: 10;
-            flex-wrap: wrap;
-        }
+  /* ============ Game area (flexible, fills remaining space) ============ */
+  #gameArea{ position:relative; flex:1 1 auto; min-height:0; overflow:hidden;
+    background:radial-gradient(ellipse at 50% 20%,#1a2233 0%,#0b0f16 75%); }
+  #gameCanvas{ position:absolute; inset:0; display:block; cursor:grab; touch-action:none; }
+  #gameCanvas:active{ cursor:grabbing; }
+  #nightOverlay{ position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply; transition:background .5s linear; z-index:5; }
 
-        .resource {
-            font-size: 14px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            background: #222230;
-            padding: 5px 9px;
-            border-radius: 6px;
-            border: 1px solid #3c3c52;
-            transition: box-shadow 0.2s, border-color 0.2s;
-        }
-        .resource.warn {
-            border-color: #FF5252;
-            box-shadow: 0 0 8px rgba(255,82,82,0.6);
-            animation: pulseWarn 1s infinite;
-        }
-        @keyframes pulseWarn {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.55; }
-        }
+  #minimapWrap{
+    position:absolute; top:10px; left:10px; z-index:10; background:rgba(15,18,26,.9);
+    border:2px solid var(--border-soft); border-radius:8px; padding:4px;
+  }
+  #minimap{ display:block; image-rendering:pixelated; width:clamp(60px,18vw,96px); height:clamp(60px,18vw,96px); }
 
-        .res-money { color: #4EFE83; }
-        .res-pop { color: #FFB74D; }
-        .res-food { color: #FF5252; }
-        .res-water { color: #4FC3F7; }
-        .res-power { color: #FFD54F; }
-        .res-happy { color: #FF8AD8; }
+  #toastContainer{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:20;
+    display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none; width:min(92%,380px);
+  }
+  .toast{
+    background:rgba(18,18,26,.96); border:1px solid var(--mint); border-radius:8px; padding:8px 14px;
+    font-size:12.5px; font-weight:600; text-align:center; animation:toastIn .25s ease, toastOut .4s ease 3.6s forwards;
+    box-shadow:0 4px 14px rgba(0,0,0,.5);
+  }
+  .toast.achievement{ border-color:var(--gold); color:var(--gold); }
+  .toast.warning{ border-color:var(--coral); color:var(--coral); }
+  .toast.event{ border-color:var(--sky); color:var(--sky); }
+  @keyframes toastIn{ from{opacity:0; transform:translateY(-14px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes toastOut{ from{opacity:1;} to{opacity:0; transform:translateY(-10px);} }
 
-        /* Панель управления камерой и временем */
-        #controls-panel {
-            position: absolute;
-            top: 65px;
-            right: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 10;
-        }
+  /* ============ Building popup ============ */
+  #buildingPopup{
+    position:fixed; z-index:60; width:220px; background:var(--bg-panel); border:1px solid var(--border-soft);
+    border-radius:10px; box-shadow:0 14px 30px rgba(0,0,0,.6); padding:10px; font-size:12.5px;
+  }
+  #buildingPopup.hidden{ display:none; }
+  .popup-head{ display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+  .popup-emoji{ font-size:20px; }
+  .popup-head b{ flex:1; font-size:13.5px; }
+  .popup-close{ background:none; border:none; color:var(--text-dim); font-size:14px; cursor:pointer; padding:2px 4px; }
+  .popup-body{ color:var(--text-dim); margin-bottom:6px; line-height:1.35; }
+  .popup-stats{ color:var(--text-main); margin-bottom:8px; line-height:1.5; }
+  .popup-actions{ display:flex; gap:6px; }
+  .popup-btn{ flex:1; border:none; border-radius:7px; padding:8px 4px; font-size:11.5px; font-weight:700; cursor:pointer; }
+  .move-btn{ background:#2c3a52; color:var(--lilac); }
+  .sell-btn{ background:#3a2530; color:var(--coral); }
 
-        .ctrl-btn {
-            background: rgba(25, 25, 38, 0.9);
-            border: 1px solid #444460;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 13px;
-            font-weight: bold;
-            transition: all 0.15s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
+  /* ============ Footer / toolbar ============ */
+  #toolbarContainer{
+    flex:0 0 auto; display:flex; flex-direction:column; gap:6px; padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+    background:linear-gradient(0deg,#11151d,#171d29); border-top:2px solid var(--border-soft); z-index:30;
+  }
+  #infoStrip{
+    display:none; align-items:center; gap:8px; background:#1a2130; border:1px solid var(--border-soft);
+    border-radius:9px; padding:6px 10px; font-size:11.5px; line-height:1.4; min-height:38px;
+  }
+  .info-icon{ font-size:20px; flex:0 0 auto; }
+  .info-text{ flex:1; color:var(--text-dim); }
+  .info-text b{ color:var(--text-main); }
+  .cancel-btn{ flex:0 0 auto; background:#3a2530; border:none; color:var(--coral); border-radius:7px;
+    padding:6px 10px; font-weight:700; cursor:pointer; font-size:12px; }
 
-        .ctrl-btn:hover {
-            background: #3a3a55;
-            border-color: #4EFE83;
-        }
-        .ctrl-btn.toggled {
-            border-color: #FF5252;
-            background: #4a2530;
-        }
+  #toolbarRow{
+    display:flex; gap:8px; overflow-x:auto; touch-action:pan-x; padding-bottom:2px; scrollbar-width:thin;
+  }
+  .build-btn{
+    width:64px; height:74px; background:#1c2330; border:2px solid #303c50; border-radius:9px; cursor:pointer;
+    display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:5px;
+    transition:all .15s ease; flex-shrink:0; position:relative;
+  }
+  .build-btn:hover{ border-color:var(--mint); background:#242e40; }
+  .build-btn.active{ border-color:var(--gold); background:#332c1c; box-shadow:0 0 10px rgba(244,185,66,.35); }
+  .build-btn.demolish.active{ border-color:var(--coral); box-shadow:0 0 10px rgba(251,106,91,.45); }
+  .build-btn.landbtn.active{ border-color:var(--sky); box-shadow:0 0 10px rgba(85,197,230,.45); }
+  .btn-emoji{ font-size:24px; line-height:1; }
+  .btn-name{ font-size:8.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; text-align:center; color:var(--text-dim); }
+  .btn-cost{ font-size:10px; color:var(--mint); font-weight:700; }
+  .lock-overlay{
+    display:none; position:absolute; inset:0; background:rgba(8,10,15,.82); border-radius:7px;
+    flex-direction:column; align-items:center; justify-content:center; font-size:15px; gap:2px;
+  }
+  .lock-overlay span{ font-size:9px; color:var(--text-dim); }
+  .build-btn.locked .lock-overlay{ display:flex; }
+  .build-btn.locked{ cursor:not-allowed; }
 
-        .speed-group {
-            display: flex;
-            gap: 4px;
-            background: rgba(25, 25, 38, 0.9);
-            padding: 4px;
-            border-radius: 6px;
-            border: 1px solid #444460;
-        }
+  #saveLoadBar{ display:flex; gap:6px; }
+  #saveLoadBar .ctrl-btn{ font-size:11px; padding:6px 10px; flex:0 0 auto; }
+  #importFileInput{ display:none; }
 
-        .speed-btn {
-            background: #202030;
-            border: none;
-            color: #aaa;
-            padding: 5px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-        }
+  /* ============ Modals ============ */
+  .modal{ position:fixed; inset:0; background:rgba(8,9,13,.88); z-index:100; display:flex;
+    align-items:center; justify-content:center; padding:16px; }
+  .modal.hidden{ display:none; }
+  .modal-card{ background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:14px;
+    padding:22px; max-width:420px; width:100%; max-height:88vh; overflow:auto; text-align:center;
+    box-shadow:0 20px 50px rgba(0,0,0,.6); }
+  .modal-icon{ font-size:44px; margin-bottom:8px; }
+  .modal-card h2{ margin:6px 0 10px; font-size:19px; }
+  .modal-card p{ color:var(--text-dim); font-size:13.5px; line-height:1.55; margin:0 0 16px; }
+  .dots{ display:flex; gap:6px; justify-content:center; margin-bottom:14px; }
+  .dot{ width:7px; height:7px; border-radius:50%; background:#333c4d; }
+  .dot.active{ background:var(--gold); }
+  .modal-actions{ display:flex; gap:8px; }
+  .modal-btn{ flex:1; border:none; border-radius:8px; padding:10px; font-weight:700; font-size:13px; cursor:pointer; }
+  .modal-btn.primary{ background:var(--mint); color:#0c1410; }
+  .modal-btn.ghost{ background:#232c3c; color:var(--text-dim); }
 
-        .speed-btn.active {
-            background: #FFD54F;
-            color: #111;
-        }
+  #gameOverScreen h1{ color:var(--coral); font-size:30px; margin:6px 0 8px; }
+  #gameOverStats{ color:#ccc; font-size:12.5px; margin-bottom:16px; }
+  .restart-btn{ padding:12px 26px; font-size:15px; font-weight:700; background:var(--mint); color:#0c1410; border:none; cursor:pointer; border-radius:8px; }
 
-        /* Мини-карта */
-        #minimapWrap {
-            position: absolute;
-            top: 65px;
-            left: 15px;
-            z-index: 10;
-            background: rgba(18, 18, 26, 0.9);
-            border: 2px solid #3c3c52;
-            border-radius: 8px;
-            padding: 5px;
-        }
-        #minimap {
-            display: block;
-            image-rendering: pixelated;
-        }
-
-        /* Нижняя панель построек */
-        #toolbar-container {
-            position: absolute;
-            bottom: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
-
-        #toolbar {
-            background: rgba(18, 18, 26, 0.95);
-            padding: 8px 12px;
-            border-radius: 10px;
-            display: flex;
-            gap: 10px;
-            border: 2px solid #3c3c52;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.7);
-            max-width: 94vw;
-            overflow-x: auto;
-        }
-
-        .build-btn {
-            width: 65px;
-            height: 76px;
-            background: #252535;
-            border: 2px solid #44445c;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            padding: 5px;
-            transition: all 0.15s ease;
-            flex-shrink: 0;
-            position: relative;
-        }
-
-        .build-btn:hover {
-            border-color: #4EFE83;
-            background: #333348;
-        }
-
-        .build-btn.active {
-            border-color: #FFD54F;
-            background: #3d3d57;
-            box-shadow: 0 0 10px rgba(255, 213, 79, 0.4);
-        }
-
-        .build-btn.demolish.active {
-            border-color: #FF5252;
-            box-shadow: 0 0 10px rgba(255, 82, 82, 0.5);
-        }
-
-        .build-btn img {
-            width: 32px;
-            height: 32px;
-            object-fit: contain;
-            image-rendering: pixelated;
-        }
-
-        .build-btn .btn-name {
-            font-size: 9px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-            text-align: center;
-        }
-
-        .build-btn .btn-cost {
-            font-size: 10px;
-            color: #4EFE83;
-            font-weight: bold;
-        }
-
-        #saveLoadBar {
-            display: flex;
-            gap: 6px;
-        }
-        #saveLoadBar .ctrl-btn { font-size: 11px; padding: 5px 10px; }
-
-        /* Уведомления */
-        #toastContainer {
-            position: absolute;
-            top: 65px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 20;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            align-items: center;
-            pointer-events: none;
-        }
-        .toast {
-            background: rgba(18,18,26,0.95);
-            border: 1px solid #4EFE83;
-            border-radius: 6px;
-            padding: 8px 16px;
-            font-size: 13px;
-            font-weight: bold;
-            animation: toastIn 0.25s ease, toastOut 0.4s ease 3.6s forwards;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        }
-        .toast.achievement { border-color: #FFD54F; color: #FFD54F; }
-        .toast.warning { border-color: #FF5252; color: #FF5252; }
-        @keyframes toastIn {
-            from { opacity: 0; transform: translateY(-15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes toastOut {
-            from { opacity: 1; }
-            to { opacity: 0; transform: translateY(-10px); }
-        }
-
-        /* Экран поражения */
-        #gameOverScreen {
-            display: none;
-            position: absolute;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(10, 10, 15, 0.9);
-            z-index: 100;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: 20px;
-        }
-
-        #gameOverScreen h1 {
-            color: #FF5252;
-            font-size: 42px;
-            margin: 0 0 10px 0;
-        }
-
-        #gameOverStats {
-            color: #ccc;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        button.restart-btn {
-            padding: 12px 28px;
-            font-size: 16px;
-            font-family: inherit;
-            font-weight: bold;
-            background: #4EFE83;
-            color: #111;
-            border: none;
-            cursor: pointer;
-            border-radius: 6px;
-        }
-
-        #importFileInput { display: none; }
-
-        #helpHint {
-            position: absolute;
-            bottom: 100px;
-            left: 15px;
-            z-index: 10;
-            background: rgba(18,18,26,0.85);
-            border: 1px solid #3c3c52;
-            border-radius: 6px;
-            padding: 6px 10px;
-            font-size: 11px;
-            color: #999;
-            max-width: 220px;
-        }
-    </style>
+  @media (max-width:480px){
+    .build-btn{ width:56px; height:68px; }
+    .btn-emoji{ font-size:20px; }
+  }
+</style>
 </head>
 <body>
+<div id="appRoot">
 
-    <div id="hud">
-        <div class="resource res-money">💰 $<span id="valMoney">1000</span></div>
-        <div class="resource res-pop">👥 <span id="valPop">0</span></div>
-        <div class="resource res-food" id="resFood">🌾 <span id="valFood">30</span></div>
-        <div class="resource res-water" id="resWater">💧 <span id="valWater">30</span></div>
-        <div class="resource res-power" id="resPower">⚡ <span id="valPower">15</span></div>
-        <div class="resource res-happy" id="resHappy">😊 <span id="valHappy">50</span>%</div>
+  <header id="hud">
+    <button id="hudBtn" title="Помощь / обучение" onclick="openTutorial()">❓</button>
+    <div class="resource res-money">💰 $<span id="valMoney">1000</span></div>
+    <div class="resource res-pop">👥 <span id="valPop">0</span>/<span id="valCap">0</span></div>
+    <div class="resource res-food" id="resFood">🌾 <span id="valFood">30</span><span class="rate-arrow">—</span></div>
+    <div class="resource res-water" id="resWater">💧 <span id="valWater">30</span><span class="rate-arrow">—</span></div>
+    <div class="resource res-power" id="resPower">⚡ <span id="valPower">15</span><span class="rate-arrow">—</span></div>
+    <div class="resource res-happy" id="resHappy">😊 <span id="valHappy">50</span>%</div>
+    <div class="resource res-time"><span id="timeDisplay">☀️ 12:00</span> · <span id="seasonDisplay">🌸 Весна</span></div>
+    <button id="hudBtn" title="Настройки" onclick="toggleSettings()">⚙️</button>
+    <div id="goalBar">🎯 Цель: —</div>
+  </header>
+
+  <div id="settingsDropdown" class="hidden">
+    <div class="set-row"><span class="set-label">Камера</span>
+      <button class="ctrl-btn" onclick="rotateMap()">🔄 Повернуть</button>
     </div>
-
-    <div id="nightOverlay"></div>
-
-    <div id="toastContainer"></div>
-
-    <!-- Мини-карта -->
-    <div id="minimapWrap">
-        <canvas id="minimap" width="96" height="96"></canvas>
+    <div class="set-row">
+      <button class="ctrl-btn" onclick="changeZoom(0.15)">🔍 +</button>
+      <button class="ctrl-btn" onclick="changeZoom(-0.15)">🔍 −</button>
     </div>
-
-    <!-- Кнопки управления -->
-    <div id="controls-panel">
-        <button class="ctrl-btn" onclick="rotateMap()">🔄 Повернуть (90°)</button>
-        <div style="display: flex; gap: 4px;">
-            <button class="ctrl-btn" style="flex:1" onclick="changeZoom(0.15)">🔍 +</button>
-            <button class="ctrl-btn" style="flex:1" onclick="changeZoom(-0.15)">🔍 -</button>
-        </div>
-        <div class="speed-group">
-            <button class="speed-btn" onclick="setSpeed(0, this)">⏸️</button>
-            <button class="speed-btn active" onclick="setSpeed(1, this)">1x</button>
-            <button class="speed-btn" onclick="setSpeed(2, this)">2x</button>
-            <button class="speed-btn" onclick="setSpeed(5, this)">5x</button>
-        </div>
-        <button class="ctrl-btn" id="soundBtn" onclick="toggleSound()">🔊 Звук</button>
+    <div class="set-row">
+      <div class="speed-group">
+        <button class="speed-btn" onclick="setSpeed(0,this)">⏸️</button>
+        <button class="speed-btn active" onclick="setSpeed(1,this)">1x</button>
+        <button class="speed-btn" onclick="setSpeed(2,this)">2x</button>
+        <button class="speed-btn" onclick="setSpeed(5,this)">5x</button>
+      </div>
     </div>
+    <div class="set-row"><button class="ctrl-btn" id="soundBtn" onclick="toggleSound()">🔊 Звук</button></div>
+    <label class="set-checkbox"><input type="checkbox" id="minimapToggle" checked onchange="document.getElementById('minimapWrap').style.display=this.checked?'block':'none'"> Показывать мини-карту</label>
+  </div>
 
+  <main id="gameArea">
     <canvas id="gameCanvas"></canvas>
+    <div id="nightOverlay"></div>
+    <div id="minimapWrap"><canvas id="minimap" width="96" height="96"></canvas></div>
+    <div id="toastContainer"></div>
+    <div id="buildingPopup" class="hidden"></div>
+  </main>
 
-    <div id="helpHint">ЛКМ — построить/снести · ПКМ или колесо мыши зажать — двигать камеру · На телефоне: один палец — двигать, тап — построить</div>
-
-    <div id="toolbar-container">
-        <div id="saveLoadBar">
-            <button class="ctrl-btn" onclick="saveGame()">💾 Сохранить</button>
-            <button class="ctrl-btn" onclick="document.getElementById('importFileInput').click()">📂 Загрузить</button>
-            <input type="file" id="importFileInput" accept="application/json" onchange="loadGameFromFile(event)">
-        </div>
-        <div id="toolbar"></div>
+  <footer id="toolbarContainer">
+    <div id="infoStrip"></div>
+    <div id="toolbarRow"></div>
+    <div id="saveLoadBar">
+      <button class="ctrl-btn" onclick="saveGame()">💾 Сохранить в файл</button>
+      <button class="ctrl-btn" onclick="document.getElementById('importFileInput').click()">📂 Загрузить файл</button>
+      <input type="file" id="importFileInput" accept="application/json" onchange="loadGameFromFile(event)">
     </div>
+  </footer>
 
-    <div id="gameOverScreen">
-        <h1 id="gameOverTitle">КОНЕЦ ИГРЫ</h1>
-        <p id="gameOverDesc">Ваш город опустел или обанкротился.</p>
-        <p id="gameOverStats"></p>
-        <button class="restart-btn" onclick="resetGame()">Начать заново</button>
+  <div id="tutorialModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-icon" id="tutIcon">🏙️</div>
+      <h2 id="tutTitle">Добро пожаловать!</h2>
+      <p id="tutText">...</p>
+      <div class="dots" id="tutDots"></div>
+      <div class="modal-actions">
+        <button class="modal-btn ghost" onclick="closeTutorial()">Пропустить</button>
+        <button class="modal-btn primary" id="tutNextBtn" onclick="tutorialNext()">Далее</button>
+      </div>
     </div>
+  </div>
 
-    <script>
-        // =========================================================
-        // 📁 1. КОНФИГУРАЦИЯ ЗДАНИЙ И ТЕКСТУР
-        // =========================================================
-        const IMAGE_FOLDER = 'PNG/'; // Измени на '', если картинки лежат в той же папке
+  <div id="gameOverScreen" class="modal hidden">
+    <div class="modal-card">
+      <h1 id="gameOverTitle">КОНЕЦ ИГРЫ</h1>
+      <p id="gameOverDesc">Ваш город опустел или обанкротился.</p>
+      <p id="gameOverStats"></p>
+      <button class="restart-btn" onclick="resetGame()">Начать заново</button>
+    </div>
+  </div>
 
-        // Новые поля: foodProd/waterProd/powerProd - производство ресурсов,
-        // powerUse - потребление энергии зданием, happiness - бонус к счастью города,
-        // refund - процент возврата денег при сносе
-        const BUILDINGS_CONFIG = [
-            { id: 1, name: 'Дом 1',        file: 'home.png', cost: 100, pop: 3, cycleTime: 8,  money: 10, powerUse: 1, happiness: 0 },
-            { id: 2, name: 'Дом 2',        file: 'home1.png', cost: 150, pop: 5, cycleTime: 10, money: 20, powerUse: 2, happiness: 0 },
-            { id: 3, name: 'Офис',         file: 'office.png', cost: 200, pop: 0, cycleTime: 6,  money: 35, powerUse: 2, happiness: 0 },
-            { id: 4, name: 'Ферма',        file: 'farm.png', cost: 140, pop: 1, cycleTime: 12, money: 15, powerUse: 0, foodProd: 1.4, happiness: 0 },
-            { id: 5, name: 'Водокачка',    file: 'water.png', cost: 160, pop: 0, cycleTime: 10, money: 12, powerUse: 0, waterProd: 1.4, happiness: 0 },
-            { id: 6, name: 'Электростанция', file: 'electricity.png', cost: 260, pop: 0, cycleTime: 9, money: 5,  powerUse: 0, powerProd: 6, happiness: -3 },
-            { id: 7, name: 'Парк',         file: 'park.png', cost: 90,  pop: 0, cycleTime: 20, money: 2,  powerUse: 0, happiness: 8 },
-            { id: 8, name: 'Больница',     file: 'hospital.png', cost: 320, pop: 0, cycleTime: 15, money: 8,  powerUse: 3, happiness: 6 },
-        ];
+</div>
 
-        const DEMOLISH_REFUND_RATE = 0.4; // 40% денег назад при сносе
-        const FOOD_PER_POP = 0.018;   // потребление еды на 1 жителя / сек
-        const WATER_PER_POP = 0.018;  // потребление воды на 1 жителя / сек
-        const DAY_LENGTH_SECONDS = 90; // длина игровых суток
+<script>
+// =========================================================================
+// 1. КОНФИГУРАЦИЯ
+// =========================================================================
+const GRID_SIZE = 14;
+const OWNED_START_SIZE = 6;
+const INITIAL_OWNED_COUNT = OWNED_START_SIZE * OWNED_START_SIZE;
+const BASE_TILE_W = 64, BASE_TILE_H = 32;
+const DEMOLISH_REFUND_RATE = 0.4;
+const MOVE_COST = 20;
+const BASE_LAND_COST = 70;
+const FOOD_PER_POP = 0.018;
+const WATER_PER_POP = 0.018;
+const DAY_LENGTH_SECONDS = 90;
+const SEASON_LENGTH_DAYS = 4;
 
-        // =========================================================
-        // ⚙️ 2. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-        // =========================================================
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const minimapCanvas = document.getElementById('minimap');
-        const minimapCtx = minimapCanvas.getContext('2d');
+const COLORS = { mint:'#49dd8e', coral:'#fb6a5b', gold:'#f4b942', sky:'#55c5e6', lilac:'#c79bf2', dim:'#8b93a7' };
 
-        const BASE_TILE_W = 64; 
-        const BASE_TILE_H = 32; 
-        const GRID_SIZE = 12;   
+const BUILDINGS_CONFIG = [
+  { id:1, name:'Дом', emoji:'🏠', cost:100, pop:3, cycleTime:8,  money:10, powerUse:1, happiness:0, unlockPop:0,  roof:'#c0504d', wall:'#e8c9a0', desc:'Жильё для 3 горожан. Даёт доход каждые 8 сек.' },
+  { id:2, name:'Апартаменты', emoji:'🏘️', cost:170, pop:6, cycleTime:11, money:22, powerUse:2, happiness:0, unlockPop:6, roof:'#8a5fb0', wall:'#e3d3f0', desc:'Крупный дом на 6 жителей. Требует энергии.' },
+  { id:3, name:'Офис', emoji:'🏢', cost:220, pop:0, cycleTime:6, money:38, powerUse:2, happiness:0, unlockPop:4, roof:'#3d6ea5', wall:'#bcd8ee', desc:'Не даёт жильё, зато приносит стабильный доход.' },
+  { id:4, name:'Ферма', emoji:'🌾', cost:140, pop:1, cycleTime:12, money:14, powerUse:0, foodProd:1.5, happiness:0, unlockPop:0, roof:'#c79a3a', wall:'#e8d9a8', desc:'Производит еду для города.' },
+  { id:5, name:'Водокачка', emoji:'🚰', cost:160, pop:0, cycleTime:10, money:10, powerUse:0, waterProd:1.5, happiness:0, unlockPop:0, roof:'#3f8fb0', wall:'#bfe4ee', desc:'Производит воду для города.' },
+  { id:6, name:'Электростанция', emoji:'⚡', cost:280, pop:0, cycleTime:9, money:6, powerUse:0, powerProd:7, happiness:-3, unlockPop:5, roof:'#555555', wall:'#999999', desc:'Много энергии, но немного снижает счастье (дым).' },
+  { id:7, name:'Солнечная панель', emoji:'☀️', cost:260, pop:0, cycleTime:9, money:4, powerUse:0, powerProd:4, happiness:1, unlockPop:15, roof:'#2b3a67', wall:'#5b7fd1', desc:'Чистая энергия без вреда счастью. Дороже станции.' },
+  { id:8, name:'Парк', emoji:'🌳', cost:90, pop:0, cycleTime:20, money:2, powerUse:0, happiness:9, unlockPop:0, roof:'#4c7a2f', wall:'#78ab4c', desc:'Сильно повышает счастье жителей города.' },
+  { id:9, name:'Магазин', emoji:'🏪', cost:180, pop:0, cycleTime:7, money:28, powerUse:2, happiness:1, unlockPop:8, roof:'#b0503f', wall:'#f0c9a0', desc:'Хороший доход, немного повышает счастье.' },
+  { id:10, name:'Школа', emoji:'🏫', cost:210, pop:0, cycleTime:14, money:5, powerUse:1, happiness:5, unlockPop:10, boostGrowth:true, roof:'#a5432f', wall:'#f2e0b8', desc:'Повышает счастье и ускоряет прирост населения.' },
+  { id:11, name:'Больница', emoji:'🏥', cost:340, pop:0, cycleTime:15, money:8, powerUse:3, happiness:7, unlockPop:20, roof:'#c0473f', wall:'#ffffff', desc:'Сильно повышает счастье горожан.' },
+];
 
-        let zoom = 1.0;          
-        let rotation = 0;        
-        let gameSpeed = 1;       
+const SEASONS = [
+  { name:'Весна', emoji:'🌸', food:1.1, water:1.0, happy:2 },
+  { name:'Лето',  emoji:'☀️', food:1.3, water:0.95, happy:1 },
+  { name:'Осень', emoji:'🍂', food:1.0, water:1.0, happy:0 },
+  { name:'Зима',  emoji:'❄️', food:0.6, water:0.85, happy:-4 },
+];
 
-        let offsetX = 0;
-        let offsetY = 0;
+const EVENTS = [
+  { name:'🎉 Городской фестиваль!', desc:'Счастье +15 на 30 сек', kind:'buff', happiness:15, duration:30, tone:'event' },
+  { name:'📦 Торговый караван', desc:'Доход зданий +50% на 25 сек', kind:'buff', income:0.5, duration:25, tone:'event' },
+  { name:'🌧 Ливень', desc:'Мгновенно +10 к запасу воды', kind:'instant', water:10, tone:'event' },
+  { name:'💵 Городской грант', desc:'Казна пополнена на $150', kind:'instant', money:150, tone:'event' },
+  { name:'🔥 Небольшой пожар', desc:'Убыток $70 на ремонт', kind:'instant', money:-70, tone:'warning' },
+  { name:'🥶 Похолодание', desc:'Счастье −8 на 20 сек', kind:'buff', happiness:-8, duration:20, tone:'warning' },
+];
 
-        const START_RESOURCES = { money: 1000, pop: 0, food: 30, water: 30, power: 15, happiness: 55 };
-        let resources = { ...START_RESOURCES };
+const ACHIEVEMENTS = [
+  { id:'first_house', test:()=>stats.buildingsBuilt>=1, text:'🏆 Достижение: Первая постройка!', goal:'Постройте первое здание (выберите его внизу и коснитесь карты)' },
+  { id:'land1', test:()=>stats.landBought>=1, text:'🏆 Достижение: Первая покупка земли!', goal:'Купите участок земли инструментом 🗺️ «Земля»' },
+  { id:'power1', test:()=>hasBuildingType(6)||hasBuildingType(7), text:'🏆 Достижение: Город под напряжением!', goal:'Постройте электростанцию или солнечную панель' },
+  { id:'pop10', test:()=>resources.pop>=10, text:'🏆 Достижение: 10 жителей!', goal:'Дорастите население до 10 жителей' },
+  { id:'rich1', test:()=>resources.money>=2000, text:'🏆 Достижение: Первые $2000!', goal:'Накопите $2000 в казне' },
+  { id:'pop25', test:()=>resources.pop>=25, text:'🏆 Достижение: 25 жителей!', goal:'Дорастите население до 25 жителей' },
+  { id:'happy80', test:()=>resources.happiness>=80, text:'🏆 Достижение: Счастливый город!', goal:'Поднимите счастье города до 80%' },
+  { id:'pop50', test:()=>resources.pop>=50, text:'🏆 Достижение: Мегаполис! 50 жителей', goal:'Дорастите население до 50 жителей' },
+  { id:'rich2', test:()=>resources.money>=10000, text:'🏆 Достижение: Магнат! $10000', goal:'Накопите $10000 в казне' },
+];
 
-        let grid = []; // 0 = пусто, иначе Объект здания
-        let hoveredTile = { x: -1, y: -1 };
-        let selectedBuildingId = BUILDINGS_CONFIG[0].id;
-        let demolishMode = false;
+const TUTORIAL_SLIDES = [
+  { icon:'🏙️', title:'Добро пожаловать в Pixel City!', text:'Стройте город, следите за ресурсами и делайте жителей счастливыми. Пройдёмся по основам за полминуты.' },
+  { icon:'💰', title:'Ресурсы города', text:'Вверху — деньги, население, еда, вода, энергия и счастье. Стрелки ▲▼ рядом с ресурсом показывают, растёт запас или падает. Следите, чтобы еда, вода и энергия не уходили в минус!' },
+  { icon:'🏗️', title:'Стройка', text:'Внизу выберите здание и проведите пальцем (или мышью с зажатой кнопкой) по карте — так можно построить сразу несколько зданий. Панель над кнопками показывает, что даёт выбранное здание.' },
+  { icon:'🔁', title:'Управление зданиями', text:'Коснитесь уже построенного здания, чтобы перенести его на новое место или продать за часть стоимости.' },
+  { icon:'🗺️', title:'Расширение территории', text:'Затуманенные клетки со значком 🔒 — не ваши. Инструмент «Купить землю» позволяет расширяться; цена участка растёт с каждой покупкой.' },
+  { icon:'🎯', title:'Цели и события', text:'Строка «Цель» под шапкой подскажет, что делать дальше. В городе также сменяются день/ночь и времена года, а иногда случаются случайные события — следите за уведомлениями!' },
+];
 
-        let dayTime = 0; // 0..DAY_LENGTH_SECONDS
-        let gameOver = false;
-        let soundOn = true;
+// =========================================================================
+// 2. ГЛОБАЛЬНОЕ СОСТОЯНИЕ
+// =========================================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimap');
+const minimapCtx = minimapCanvas.getContext('2d');
+const gameAreaEl = document.getElementById('gameArea');
 
-        const loadedImages = {};
-        const citizens = [];
-        const floatingTexts = []; // Массив для всплывающей анимации текста
-        const particles = []; // Частицы постройки/сноса
+let viewW = 300, viewH = 300;
+let zoom = 0.85, rotation = 0, gameSpeed = 1;
+let offsetX = 0, offsetY = 0, initialOffsetSet = false;
 
-        let isDragging = false;
-        let dragStartX = 0, dragStartY = 0;
-        let dragMoved = false;
+const START_RESOURCES = { money:1000, pop:0, food:30, water:30, power:15, happiness:55 };
+let resources = { ...START_RESOURCES };
 
-        // Достижения
-        const ACHIEVEMENTS = [
-            { id: 'first_house',  test: s => s.buildingsBuilt >= 1,  text: '🏆 Достижение: Первая постройка!' },
-            { id: 'pop10',        test: s => resources.pop >= 10,    text: '🏆 Достижение: 10 жителей!' },
-            { id: 'pop25',        test: s => resources.pop >= 25,    text: '🏆 Достижение: 25 жителей!' },
-            { id: 'rich1',        test: s => resources.money >= 2000, text: '🏆 Достижение: Первые $2000!' },
-            { id: 'rich2',        test: s => resources.money >= 10000, text: '🏆 Достижение: Магнат! $10000' },
-            { id: 'happy100',     test: s => resources.happiness >= 100, text: '🏆 Достижение: Город счастья!' },
-        ];
-        const unlockedAchievements = new Set();
-        let stats = { buildingsBuilt: 0 };
+let grid = [];
+let owned = [];
+let hoveredTile = { vx:-1, vy:-1 };
+let selectedBuildingId = BUILDINGS_CONFIG[0].id;
+let toolMode = 'select'; // select | build | demolish | buyland | move
+let movingFrom = null;
+let selectedBuildingPopup = null;
 
-        // =========================================================
-        // 🔊 SOUND (генерация звуков без файлов, Web Audio API)
-        // =========================================================
-        let audioCtx = null;
-        function ensureAudio() {
-            if (!audioCtx) {
-                try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { audioCtx = null; }
-            }
+let dayTime = 0, dayCount = 0, gameOver = false, soundOn = true;
+let eventTimer = 0, nextEventAt = 45 + Math.random()*45;
+let activeBuffs = [];
+
+const citizens = [];
+const floatingTexts = [];
+const particles = [];
+const starField = Array.from({length:46}, () => ({ x:Math.random(), y:Math.random()*0.55, r:Math.random()*1.4+0.4, tw:Math.random()*6 }));
+
+let pointers = new Map();
+let isPanning = false, panStart = {x:0,y:0}, panOffsetStart = {x:0,y:0};
+let pinchStartDist = null, pinchStartZoom = 1, pinchCenterStart = {x:0,y:0};
+let dragStartClient = null, dragMovedFlag = false;
+let paintedTilesThisGesture = new Set();
+
+const unlockedAchievements = new Set();
+let stats = { buildingsBuilt:0, landBought:0, ownedCount:INITIAL_OWNED_COUNT };
+
+let growthTimer = 0, hardshipTimer = 0, spawnTimer = 0;
+let lastTime = performance.now();
+let tutorialStep = 0;
+
+// =========================================================================
+// 3. ЗВУК (Web Audio, без файлов)
+// =========================================================================
+let audioCtx = null;
+function ensureAudio(){ if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx=null; } } }
+function playTone(freq, dur, type, vol){
+  if(!soundOn) return;
+  ensureAudio(); if(!audioCtx) return;
+  const osc=audioCtx.createOscillator(), gain=audioCtx.createGain();
+  osc.type=type||'sine'; osc.frequency.value=freq; gain.gain.value=vol||0.06;
+  osc.connect(gain); gain.connect(audioCtx.destination); osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+  osc.stop(audioCtx.currentTime+dur);
+}
+function sfxBuild(){ playTone(520,0.12,'square',0.05); }
+function sfxDemolish(){ playTone(160,0.18,'sawtooth',0.06); }
+function sfxCoin(){ playTone(880,0.09,'sine',0.03); }
+function sfxError(){ playTone(120,0.2,'square',0.05); }
+function sfxAchievement(){ playTone(660,0.1,'sine',0.05); setTimeout(()=>playTone(990,0.15,'sine',0.05),100); }
+function toggleSound(){
+  soundOn=!soundOn;
+  document.querySelectorAll('#soundBtn').forEach(b=>{ b.textContent = soundOn?'🔊 Звук':'🔇 Звук'; });
+}
+
+// =========================================================================
+// 4. УВЕДОМЛЕНИЯ / ДОСТИЖЕНИЯ
+// =========================================================================
+function showToast(text, kind){
+  const container=document.getElementById('toastContainer');
+  const el=document.createElement('div');
+  el.className='toast'+(kind?' '+kind:'');
+  el.textContent=text;
+  container.appendChild(el);
+  setTimeout(()=>el.remove(),4200);
+}
+function hasBuildingType(typeId){
+  for(let y=0;y<GRID_SIZE;y++) for(let x=0;x<GRID_SIZE;x++){ const b=grid[y][x]; if(b!==0 && b.typeId===typeId) return true; }
+  return false;
+}
+function checkAchievements(){
+  ACHIEVEMENTS.forEach(a=>{
+    if(!unlockedAchievements.has(a.id) && a.test()){
+      unlockedAchievements.add(a.id);
+      showToast(a.text,'achievement');
+      sfxAchievement();
+    }
+  });
+  updateGoalBar();
+}
+function updateGoalBar(){
+  const next = ACHIEVEMENTS.find(a=>!unlockedAchievements.has(a.id));
+  const el=document.getElementById('goalBar');
+  el.textContent = next ? `🎯 Цель: ${next.goal}` : '🏆 Все цели достигнуты — продолжайте развивать город!';
+}
+function pluralPeople(n){
+  const m10=n%10, m100=n%100;
+  if(m10===1 && m100!==11) return 'житель';
+  if([2,3,4].includes(m10) && ![12,13,14].includes(m100)) return 'жителя';
+  return 'жителей';
+}
+
+// =========================================================================
+// 5. ГОРОЖАНЕ
+// =========================================================================
+class Citizen{
+  constructor(gx,gy){
+    this.gx=gx+0.5; this.gy=gy+0.5; this.targetGx=this.gx; this.targetGy=this.gy;
+    this.speed=0.025; this.color=['#FF5722','#2196F3','#E91E63','#9C27B0','#FFEB3B'][Math.floor(Math.random()*5)];
+    this.animTimer=Math.random()*100; this.isWalking=false;
+    this.lifeTime=6+Math.random()*8; this.isHeadingHome=false; this.isDead=false;
+    this.pickNewTarget();
+  }
+  pickNewTarget(){
+    const cx=Math.floor(this.gx), cy=Math.floor(this.gy);
+    const dirs=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+    if(!this.isHeadingHome){
+      const valid=dirs.filter(d=>{ const nx=cx+d.x, ny=cy+d.y; return nx>=0&&nx<GRID_SIZE&&ny>=0&&ny<GRID_SIZE&&owned[ny][nx]&&grid[ny][nx]===0; });
+      if(valid.length>0){ const d=valid[Math.floor(Math.random()*valid.length)]; this.targetGx=cx+d.x+0.5; this.targetGy=cy+d.y+0.5; }
+    } else {
+      const houses=dirs.filter(d=>{ const nx=cx+d.x, ny=cy+d.y; return nx>=0&&nx<GRID_SIZE&&ny>=0&&ny<GRID_SIZE&&grid[ny][nx]!==0; });
+      if(houses.length>0){ const d=houses[Math.floor(Math.random()*houses.length)]; this.targetGx=cx+d.x+0.5; this.targetGy=cy+d.y+0.5; }
+    }
+  }
+  update(delta,speedMult){
+    if(speedMult===0) return;
+    this.lifeTime -= delta*speedMult;
+    if(this.lifeTime<=0 && !this.isHeadingHome){ this.isHeadingHome=true; this.pickNewTarget(); }
+    const dx=this.targetGx-this.gx, dy=this.targetGy-this.gy, dist=Math.hypot(dx,dy);
+    if(dist>0.08){
+      this.gx+=(dx/dist)*this.speed*speedMult; this.gy+=(dy/dist)*this.speed*speedMult;
+      this.isWalking=true; this.animTimer+=0.25*speedMult;
+    } else {
+      if(this.isHeadingHome){ this.isDead=true; return; }
+      this.isWalking=false;
+      if(Math.random()<0.05) this.pickNewTarget();
+    }
+  }
+  draw(vx,vy){
+    const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom;
+    const sx=(vx-vy)*(tw/2)+offsetX, sy=(vx+vy)*(th/2)+offsetY;
+    const bounce=this.isWalking?Math.abs(Math.sin(this.animTimer))*(3*zoom):0;
+    const legAngle=this.isWalking?Math.sin(this.animTimer)*(3*zoom):0;
+    ctx.save(); ctx.translate(sx,sy-(4*zoom)-bounce);
+    ctx.beginPath(); ctx.ellipse(0,4*zoom+bounce,4*zoom,2*zoom,0,0,Math.PI*2); ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fill();
+    ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1,2*zoom);
+    ctx.beginPath(); ctx.moveTo(-1*zoom,0); ctx.lineTo(-1*zoom-legAngle,4*zoom); ctx.moveTo(1*zoom,0); ctx.lineTo(1*zoom+legAngle,4*zoom); ctx.stroke();
+    ctx.fillStyle=this.color; ctx.fillRect(-2.5*zoom,-5*zoom,5*zoom,5*zoom);
+    ctx.fillStyle='#FFCC99'; ctx.beginPath(); ctx.arc(0,-7.5*zoom,2.5*zoom,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// =========================================================================
+// 6. ВСПЛЫВАЮЩИЙ ТЕКСТ / ЧАСТИЦЫ
+// =========================================================================
+function addFloatingText(x,y,text,color){ floatingTexts.push({x,y,text,color,alpha:1.0}); }
+function updateAndDrawFloatingTexts(delta){
+  for(let i=floatingTexts.length-1;i>=0;i--){
+    const ft=floatingTexts[i]; ft.y-=25*delta; ft.alpha-=0.8*delta;
+    if(ft.alpha<=0){ floatingTexts.splice(i,1); continue; }
+    ctx.save(); ctx.globalAlpha=Math.max(0,ft.alpha); ctx.fillStyle=ft.color;
+    ctx.font=`bold ${Math.max(13,16*zoom)}px 'Courier New',monospace`; ctx.textAlign='center';
+    ctx.shadowColor='#000'; ctx.shadowBlur=4; ctx.fillText(ft.text,ft.x,ft.y); ctx.restore();
+  }
+}
+function addParticles(x,y,color,count){
+  for(let i=0;i<count;i++){
+    particles.push({ x,y, vx:(Math.random()-0.5)*90, vy:-Math.random()*90-20, life:0.6+Math.random()*0.4, maxLife:0.6+Math.random()*0.4, color });
+  }
+}
+function updateAndDrawParticles(delta){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i]; p.x+=p.vx*delta; p.y+=p.vy*delta; p.vy+=140*delta; p.life-=delta;
+    if(p.life<=0){ particles.splice(i,1); continue; }
+    ctx.save(); ctx.globalAlpha=Math.max(0,p.life/p.maxLife); ctx.fillStyle=p.color;
+    ctx.fillRect(p.x-2*zoom,p.y-2*zoom,4*zoom,4*zoom); ctx.restore();
+  }
+}
+
+// =========================================================================
+// 7. МАТЕМАТИКА СЕТКИ
+// =========================================================================
+function getVisualCoords(gx,gy){
+  if(rotation===0) return {vx:gx,vy:gy};
+  if(rotation===1) return {vx:GRID_SIZE-1-gy,vy:gx};
+  if(rotation===2) return {vx:GRID_SIZE-1-gx,vy:GRID_SIZE-1-gy};
+  return {vx:gy,vy:GRID_SIZE-1-gx};
+}
+function getRealCoords(vx,vy){
+  if(rotation===0) return {gx:vx,gy:vy};
+  if(rotation===1) return {gx:vy,gy:GRID_SIZE-1-vx};
+  if(rotation===2) return {gx:GRID_SIZE-1-vx,gy:GRID_SIZE-1-vy};
+  return {gx:GRID_SIZE-1-vy,gy:vx};
+}
+function toScreen(vx,vy){
+  const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom;
+  return { x:(vx-vy)*(tw/2)+offsetX, y:(vx+vy)*(th/2)+offsetY };
+}
+function toGrid(screenX,screenY){
+  const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom;
+  const adjX=screenX-offsetX, adjY=screenY-offsetY;
+  const vx=Math.floor((adjX/(tw/2)+adjY/(th/2))/2);
+  const vy=Math.floor((adjY/(th/2)-adjX/(tw/2))/2);
+  return { vx,vy };
+}
+function shadeColor(hex,percent){
+  hex=hex.replace('#',''); if(hex.length===3) hex=hex.split('').map(c=>c+c).join('');
+  const num=parseInt(hex,16);
+  let r=(num>>16)+Math.round(2.55*percent), g=((num>>8)&0xff)+Math.round(2.55*percent), b=(num&0xff)+Math.round(2.55*percent);
+  r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b));
+  return `rgb(${r},${g},${b})`;
+}
+
+// =========================================================================
+// 8. ОТРИСОВКА
+// =========================================================================
+function drawTile(x,y,ownedTile){
+  const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom;
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+tw/2,y+th/2); ctx.lineTo(x,y+th); ctx.lineTo(x-tw/2,y+th/2); ctx.closePath();
+  ctx.fillStyle = ownedTile ? '#5c8a27' : '#3a4128';
+  ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.stroke();
+
+  ctx.beginPath(); ctx.moveTo(x-tw/2,y+th/2); ctx.lineTo(x,y+th); ctx.lineTo(x,y+th+6*zoom); ctx.lineTo(x-tw/2,y+th/2+6*zoom);
+  ctx.fillStyle = ownedTile ? '#43661b' : '#2a2f1c'; ctx.fill();
+
+  ctx.beginPath(); ctx.moveTo(x,y+th); ctx.lineTo(x+tw/2,y+th/2); ctx.lineTo(x+tw/2,y+th/2+6*zoom); ctx.lineTo(x,y+th+6*zoom);
+  ctx.fillStyle = ownedTile ? '#334e14' : '#1f2314'; ctx.fill();
+}
+function drawDiamondFill(x,y,fill,alpha){
+  const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom;
+  ctx.save(); ctx.globalAlpha=alpha!==undefined?alpha:1;
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+tw/2,y+th/2); ctx.lineTo(x,y+th); ctx.lineTo(x-tw/2,y+th/2); ctx.closePath();
+  ctx.fillStyle=fill; ctx.fill(); ctx.restore();
+}
+function drawBuildingShape(x,y,conf,alpha){
+  ctx.save(); ctx.globalAlpha = alpha!==undefined?alpha:1;
+  const tw=BASE_TILE_W*zoom, th=BASE_TILE_H*zoom, h=34*zoom;
+  const roof=conf.roof||'#aaaaaa', wall=conf.wall||'#888888', wallDark=shadeColor(wall,-25);
+  ctx.fillStyle=roof;
+  ctx.beginPath(); ctx.moveTo(x,y-h); ctx.lineTo(x+tw/2,y+th/2-h); ctx.lineTo(x,y+th-h); ctx.lineTo(x-tw/2,y+th/2-h); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=wall;
+  ctx.beginPath(); ctx.moveTo(x-tw/2,y+th/2-h); ctx.lineTo(x,y+th-h); ctx.lineTo(x,y+th); ctx.lineTo(x-tw/2,y+th/2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=wallDark;
+  ctx.beginPath(); ctx.moveTo(x,y+th-h); ctx.lineTo(x+tw/2,y+th/2-h); ctx.lineTo(x+tw/2,y+th/2); ctx.lineTo(x,y+th); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x,y-h); ctx.lineTo(x+tw/2,y+th/2-h); ctx.lineTo(x+tw/2,y+th/2); ctx.lineTo(x,y+th); ctx.lineTo(x-tw/2,y+th/2); ctx.lineTo(x,y+th-h); ctx.closePath(); ctx.stroke();
+  ctx.font=`${Math.max(14,22*zoom)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(conf.emoji, x, y-h+(th/2));
+  ctx.restore();
+}
+function drawBuildingUI(pos,renderH,bData){
+  const barW=44*zoom, barH=6*zoom, barX=pos.x-barW/2, barY=pos.y-renderH-12*zoom;
+  ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(barX,barY,barW,barH);
+  ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(barX,barY,barW,barH);
+  const progress=bData.timer/bData.maxTime;
+  ctx.fillStyle=COLORS.mint; ctx.fillRect(barX+1,barY+1,Math.max(0,(barW-2)*progress),barH-2);
+  if(bData.residents>0){
+    ctx.fillStyle='#FFB74D'; ctx.font=`bold ${Math.max(10,11*zoom)}px 'Courier New',monospace`; ctx.textAlign='center';
+    ctx.fillText(`👥 ${bData.residents}`, pos.x, barY-4*zoom);
+  }
+}
+function getDarkness(){
+  const cycle=(dayTime/DAY_LENGTH_SECONDS)%1;
+  return (Math.cos(cycle*Math.PI*2)*-1+1)/2;
+}
+function getNightColor(){
+  const alpha=getDarkness()*0.55;
+  return `rgba(15,20,60,${alpha.toFixed(3)})`;
+}
+function getCurrentSeason(){ return SEASONS[Math.floor(dayCount/SEASON_LENGTH_DAYS)%4]; }
+
+function drawSkyDecor(){
+  const darkness=getDarkness();
+  if(darkness>0.12){
+    ctx.save(); ctx.fillStyle='#fff';
+    starField.forEach(s=>{
+      const flicker=0.55+0.45*Math.sin(performance.now()/600+s.tw);
+      ctx.globalAlpha=Math.min(1,darkness*1.1)*flicker;
+      ctx.beginPath(); ctx.arc(s.x*viewW, s.y*viewH, s.r, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.restore();
+  }
+  const cycle=(dayTime/DAY_LENGTH_SECONDS)%1;
+  const arcX = viewW*0.5 + Math.cos((cycle-0.25)*Math.PI*2) * (viewW*0.42);
+  const arcY = viewH*0.16 + Math.sin((cycle-0.25)*Math.PI*2) * (viewH*0.12) - viewH*0.05;
+  ctx.save(); ctx.globalAlpha=0.95;
+  ctx.font='22px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(darkness>0.5?'🌙':'☀️', Math.max(20,Math.min(viewW-20,arcX)), Math.max(18,arcY));
+  ctx.restore();
+}
+
+function renderLoop(){
+  ctx.clearRect(0,0,viewW,viewH);
+  drawSkyDecor();
+
+  for(let vy=0; vy<GRID_SIZE; vy++){
+    for(let vx=0; vx<GRID_SIZE; vx++){
+      const pos=toScreen(vx,vy);
+      if(pos.x < -80 || pos.x > viewW+80 || pos.y < -80 || pos.y > viewH+80) continue;
+      const real=getRealCoords(vx,vy);
+      const isOwned = owned[real.gy][real.gx];
+      drawTile(pos.x,pos.y,isOwned);
+
+      const isHovered = (vx===hoveredTile.vx && vy===hoveredTile.vy);
+
+      if(!isOwned){
+        drawDiamondFill(pos.x,pos.y,'#05070c',0.5);
+        if(zoom>0.45){
+          ctx.save(); ctx.font=`${Math.max(11,15*zoom)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.globalAlpha=0.85; ctx.fillText('🔒', pos.x, pos.y+(BASE_TILE_H*zoom)/2);
+          ctx.restore();
         }
-        function playTone(freq, dur, type, vol) {
-            if (!soundOn) return;
-            ensureAudio();
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type || 'sine';
-            osc.frequency.value = freq;
-            gain.gain.value = vol || 0.06;
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
-            osc.stop(audioCtx.currentTime + dur);
+        if(isHovered && toolMode==='buyland'){
+          drawDiamondFill(pos.x,pos.y, isAdjacentOwned(real.gx,real.gy) ? 'rgba(85,197,230,0.45)' : 'rgba(251,106,91,0.4)');
         }
-        function sfxBuild() { playTone(520, 0.12, 'square', 0.05); }
-        function sfxDemolish() { playTone(160, 0.18, 'sawtooth', 0.06); }
-        function sfxCoin() { playTone(880, 0.09, 'sine', 0.03); }
-        function sfxError() { playTone(120, 0.2, 'square', 0.05); }
-        function sfxAchievement() { playTone(660, 0.1, 'sine', 0.05); setTimeout(() => playTone(990, 0.15, 'sine', 0.05), 100); }
-        function toggleSound() {
-            soundOn = !soundOn;
-            document.getElementById('soundBtn').textContent = soundOn ? '🔊 Звук' : '🔇 Звук';
-            document.getElementById('soundBtn').classList.toggle('toggled', !soundOn);
+      } else {
+        if(isHovered){
+          let hcol='rgba(255,255,255,0.35)';
+          if(toolMode==='demolish') hcol='rgba(251,106,91,0.4)';
+          else if(toolMode==='move') hcol='rgba(199,155,242,0.4)';
+          drawDiamondFill(pos.x,pos.y,hcol);
         }
-
-        // =========================================================
-        // 🔔 УВЕДОМЛЕНИЯ (toasts)
-        // =========================================================
-        function showToast(text, kind) {
-            const container = document.getElementById('toastContainer');
-            const el = document.createElement('div');
-            el.className = 'toast' + (kind ? ' ' + kind : '');
-            el.textContent = text;
-            container.appendChild(el);
-            setTimeout(() => el.remove(), 4200);
+        const bData=grid[real.gy][real.gx];
+        if(bData!==0){
+          const conf=BUILDINGS_CONFIG.find(c=>c.id===bData.typeId);
+          let renderH=34*zoom;
+          let scaleAnim=1;
+          if(bData.buildAnim<1){ bData.buildAnim=Math.min(1,bData.buildAnim+0.06); scaleAnim=0.4+bData.buildAnim*0.6; }
+          const isMoving = movingFrom && movingFrom.x===real.gx && movingFrom.y===real.gy;
+          ctx.save();
+          if(scaleAnim<1 || isMoving){
+            ctx.translate(pos.x,pos.y); ctx.scale(scaleAnim, scaleAnim); ctx.translate(-pos.x,-pos.y);
+          }
+          if(conf) drawBuildingShape(pos.x,pos.y,conf, isMoving?0.45:1);
+          ctx.restore();
+          if(!isMoving) drawBuildingUI(pos,renderH,bData);
+        } else if(isHovered && toolMode==='build'){
+          const conf=BUILDINGS_CONFIG.find(c=>c.id===selectedBuildingId);
+          if(conf) drawBuildingShape(pos.x,pos.y,conf,0.45);
         }
+      }
 
-        function checkAchievements() {
-            ACHIEVEMENTS.forEach(a => {
-                if (!unlockedAchievements.has(a.id) && a.test(stats)) {
-                    unlockedAchievements.add(a.id);
-                    showToast(a.text, 'achievement');
-                    sfxAchievement();
-                }
-            });
+      citizens.forEach(c=>{
+        const cVis=getVisualCoords(Math.floor(c.gx),Math.floor(c.gy));
+        if(cVis.vx===vx && cVis.vy===vy){
+          const realVis=getVisualCoords(c.gx,c.gy);
+          c.draw(realVis.vx,realVis.vy);
         }
+      });
+    }
+  }
 
-        // =========================================================
-        // 🚶 3. ЧЕЛОВЕЧКИ (УМНАЯ НАВИГАЦИЯ И ВХОД В ДОМ)
-        // =========================================================
-        class Citizen {
-            constructor(gx, gy) {
-                this.gx = gx + 0.5;
-                this.gy = gy + 0.5;
-                this.targetGx = this.gx;
-                this.targetGy = this.gy;
-                
-                this.speed = 0.025;
-                this.color = ['#FF5722', '#2196F3', '#E91E63', '#9C27B0', '#FFEB3B'][Math.floor(Math.random() * 5)];
-                this.animTimer = Math.random() * 100;
-                this.isWalking = false;
-                this.lifeTime = 6 + Math.random() * 8; // Время прогулки в секундах перед входом в дом
-                this.isHeadingHome = false;
-                this.isDead = false;
+  updateAndDrawFloatingTexts(0.016);
+  updateAndDrawParticles(0.016);
+  document.getElementById('nightOverlay').style.background=getNightColor();
+  drawMinimap();
+  requestAnimationFrame(renderLoop);
+}
 
-                this.pickNewTarget();
-            }
+function drawMinimap(){
+  minimapCtx.clearRect(0,0,96,96);
+  const cell=96/GRID_SIZE;
+  minimapCtx.fillStyle='#05070c'; minimapCtx.fillRect(0,0,96,96);
+  for(let y=0;y<GRID_SIZE;y++){
+    for(let x=0;x<GRID_SIZE;x++){
+      if(!owned[y][x]) continue;
+      minimapCtx.fillStyle='#213a0d';
+      minimapCtx.fillRect(x*cell,y*cell,cell-0.5,cell-0.5);
+      const bData=grid[y][x];
+      if(bData!==0){
+        const conf=BUILDINGS_CONFIG.find(b=>b.id===bData.typeId);
+        minimapCtx.fillStyle = conf ? conf.roof : '#B0BEC5';
+        minimapCtx.fillRect(x*cell,y*cell,cell-0.5,cell-0.5);
+      }
+    }
+  }
+}
 
-            pickNewTarget() {
-                const currentX = Math.floor(this.gx);
-                const currentY = Math.floor(this.gy);
-                const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+// =========================================================================
+// 9. ЗЕМЛЯ / ПОКУПКА УЧАСТКОВ
+// =========================================================================
+function isAdjacentOwned(x,y){
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  return dirs.some(([dx,dy])=>{ const nx=x+dx, ny=y+dy; return nx>=0&&nx<GRID_SIZE&&ny>=0&&ny<GRID_SIZE&&owned[ny][nx]; });
+}
+function getLandCost(){ return Math.round(BASE_LAND_COST*Math.pow(1.07, stats.ownedCount-INITIAL_OWNED_COUNT)); }
+function tryBuyLand(x,y){
+  if(x<0||x>=GRID_SIZE||y<0||y>=GRID_SIZE) return false;
+  if(owned[y][x]) return false;
+  if(!isAdjacentOwned(x,y)){ showToast('Можно покупать только участки рядом со своей территорией','warning'); return false; }
+  const cost=getLandCost();
+  if(resources.money<cost){ sfxError(); showToast(`Недостаточно денег ($${cost})`,'warning'); return false; }
+  resources.money-=cost; owned[y][x]=true; stats.ownedCount++; stats.landBought++;
+  const vis=getVisualCoords(x,y); const pos=toScreen(vis.vx,vis.vy);
+  addParticles(pos.x,pos.y,COLORS.sky,10); addFloatingText(pos.x,pos.y-10*zoom,`-$${cost}`,COLORS.coral);
+  sfxCoin(); showToast(`🗺️ Участок куплен за $${cost}`);
+  checkAchievements(); updateHUD(); updateInfoStrip();
+  return true;
+}
 
-                if (!this.isHeadingHome) {
-                    // Ищем только ПУСТЫЕ ячейки для прогулки (не ходим сквозь текстуры!)
-                    const validDirs = dirs.filter(d => {
-                        let nx = currentX + d.x;
-                        let ny = currentY + d.y;
-                        return nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && grid[ny][nx] === 0;
-                    });
+// =========================================================================
+// 10. ПОСТРОЙКА / СНОС / ПЕРЕНОС / ПРОДАЖА
+// =========================================================================
+function placeBuilding(gx,gy,b){
+  resources.money-=b.cost; resources.pop+=b.pop;
+  grid[gy][gx]={ typeId:b.id, timer:0, maxTime:b.cycleTime, money:b.money, residents:b.pop, buildAnim:0 };
+  stats.buildingsBuilt++;
+  const vis=getVisualCoords(gx,gy); const pos=toScreen(vis.vx,vis.vy);
+  addParticles(pos.x,pos.y-10*zoom,COLORS.mint,8); sfxBuild();
+  checkAchievements(); updateHUD();
+}
+function demolishAt(gx,gy){
+  const bData=grid[gy][gx]; if(bData===0) return;
+  const conf=BUILDINGS_CONFIG.find(b=>b.id===bData.typeId);
+  const refund=conf?Math.round(conf.cost*DEMOLISH_REFUND_RATE):0;
+  resources.money+=refund; resources.pop=Math.max(0,resources.pop-bData.residents);
+  const vis=getVisualCoords(gx,gy); const pos=toScreen(vis.vx,vis.vy);
+  addParticles(pos.x,pos.y-15*zoom,COLORS.coral,10); addFloatingText(pos.x,pos.y-30*zoom,`+$${refund}`,COLORS.gold);
+  sfxDemolish(); grid[gy][gx]=0; updateHUD();
+}
+function sellBuilding(gx,gy){
+  demolishAt(gx,gy);
+  closeBuildingPopup();
+}
+function startMove(gx,gy){
+  movingFrom={x:gx,y:gy};
+  setToolMode('move');
+  closeBuildingPopup();
+}
+function cancelMove(){ movingFrom=null; setToolMode('select'); }
+function handleTapMove(vx,vy){
+  if(!movingFrom) return;
+  if(vx<0||vx>=GRID_SIZE||vy<0||vy>=GRID_SIZE) return;
+  const real=getRealCoords(vx,vy); const gx=real.gx, gy=real.gy;
+  if(gx===movingFrom.x && gy===movingFrom.y){ cancelMove(); return; }
+  if(!owned[gy][gx]){ showToast('Переносить можно только на свою территорию','warning'); return; }
+  if(grid[gy][gx]!==0){ showToast('Эта клетка уже занята','warning'); return; }
+  if(resources.money<MOVE_COST){ sfxError(); showToast(`Нужно $${MOVE_COST} на переезд`,'warning'); return; }
+  resources.money-=MOVE_COST;
+  const bData=grid[movingFrom.y][movingFrom.x];
+  grid[movingFrom.y][movingFrom.x]=0;
+  bData.buildAnim=0;
+  grid[gy][gx]=bData;
+  sfxBuild(); showToast('🔁 Здание перенесено');
+  const vis=getVisualCoords(gx,gy); const pos=toScreen(vis.vx,vis.vy);
+  addParticles(pos.x,pos.y,COLORS.lilac,8);
+  cancelMove(); updateHUD();
+}
 
-                    if (validDirs.length > 0) {
-                        const d = validDirs[Math.floor(Math.random() * validDirs.length)];
-                        this.targetGx = currentX + d.x + 0.5;
-                        this.targetGy = currentY + d.y + 0.5;
-                    }
-                } else {
-                    // Направляется в ближайший дом для входа
-                    const houseDirs = dirs.filter(d => {
-                        let nx = currentX + d.x;
-                        let ny = currentY + d.y;
-                        return nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && grid[ny][nx] !== 0;
-                    });
+function paintAction(vx,vy){
+  if(vx<0||vx>=GRID_SIZE||vy<0||vy>=GRID_SIZE) return;
+  const key=vx+','+vy;
+  if(paintedTilesThisGesture.has(key)) return;
+  paintedTilesThisGesture.add(key);
+  const real=getRealCoords(vx,vy); const gx=real.gx, gy=real.gy;
 
-                    if (houseDirs.length > 0) {
-                        const d = houseDirs[Math.floor(Math.random() * houseDirs.length)];
-                        this.targetGx = currentX + d.x + 0.5;
-                        this.targetGy = currentY + d.y + 0.5;
-                    }
-                }
-            }
+  if(toolMode==='build'){
+    if(!owned[gy][gx]) return;
+    if(grid[gy][gx]!==0) return;
+    const b=BUILDINGS_CONFIG.find(x=>x.id===selectedBuildingId);
+    if(!b) return;
+    if(resources.pop<b.unlockPop){ sfxError(); showToast(`🔒 Открывается при ${b.unlockPop} жителях`,'warning'); return; }
+    if(resources.money<b.cost){ sfxError(); showToast('Недостаточно денег!','warning'); return; }
+    placeBuilding(gx,gy,b);
+  } else if(toolMode==='demolish'){
+    if(grid[gy][gx]===0) return;
+    demolishAt(gx,gy);
+  } else if(toolMode==='buyland'){
+    tryBuyLand(gx,gy);
+  }
+}
 
-            update(delta, speedMult) {
-                if (speedMult === 0) return;
+// =========================================================================
+// 11. ПОПАП ЗДАНИЯ
+// =========================================================================
+function openBuildingPopup(gx,gy,clientX,clientY){
+  const bData=grid[gy][gx]; if(bData===0) return;
+  const conf=BUILDINGS_CONFIG.find(b=>b.id===bData.typeId);
+  if(!conf) return;
+  const refund=Math.round(conf.cost*DEMOLISH_REFUND_RATE);
+  const popup=document.getElementById('buildingPopup');
+  popup.innerHTML = `
+    <div class="popup-head"><span class="popup-emoji">${conf.emoji}</span><b>${conf.name}</b><button class="popup-close" onclick="closeBuildingPopup()">✖</button></div>
+    <div class="popup-body">${conf.desc}</div>
+    <div class="popup-stats">${bData.residents>0?`👥 ${bData.residents} жителей<br>`:''}💰 доход $${bData.money} каждые ${bData.maxTime}с</div>
+    <div class="popup-actions">
+      <button class="popup-btn move-btn" onclick="startMove(${gx},${gy})">🔁 Перенести</button>
+      <button class="popup-btn sell-btn" onclick="sellBuilding(${gx},${gy})">🗑 Продать +$${refund}</button>
+    </div>`;
+  popup.classList.remove('hidden');
+  popup.style.left='-9999px'; popup.style.top='-9999px';
+  requestAnimationFrame(()=>{
+    const rect=popup.getBoundingClientRect();
+    const gaRect=gameAreaEl.getBoundingClientRect();
+    let px=clientX-rect.width/2, py=clientY-rect.height-18;
+    px=Math.min(Math.max(px,gaRect.left+8), gaRect.right-rect.width-8);
+    py=Math.min(Math.max(py,gaRect.top+8), gaRect.bottom-rect.height-8);
+    popup.style.left=px+'px'; popup.style.top=py+'px';
+  });
+  selectedBuildingPopup={gx,gy};
+}
+function closeBuildingPopup(){
+  document.getElementById('buildingPopup').classList.add('hidden');
+  selectedBuildingPopup=null;
+}
 
-                this.lifeTime -= delta * speedMult;
-                if (this.lifeTime <= 0 && !this.isHeadingHome) {
-                    this.isHeadingHome = true;
-                    this.pickNewTarget();
-                }
+// =========================================================================
+// 12. ИНСТРУМЕНТЫ / INFO STRIP
+// =========================================================================
+function buildInfoHTML(b){
+  const parts=[];
+  if(b.pop>0) parts.push(`👥 +${b.pop} жит.`);
+  if(b.foodProd) parts.push(`🌾 +${b.foodProd}/с`);
+  if(b.waterProd) parts.push(`💧 +${b.waterProd}/с`);
+  if(b.powerProd) parts.push(`⚡ +${b.powerProd}`);
+  if(b.powerUse) parts.push(`⚡ -${b.powerUse}`);
+  if(b.happiness) parts.push(`${b.happiness>0?'😊 +':'☹️ '}${b.happiness}`);
+  parts.push(`💰 +$${b.money}/${b.cycleTime}с`);
+  return `<div class="info-icon">${b.emoji}</div><div class="info-text"><b>${b.name}</b> · $${b.cost}<br>${parts.join(' · ')}</div><button class="cancel-btn" onclick="setToolMode('select')">✖ Отмена</button>`;
+}
+function updateInfoStrip(){
+  const strip=document.getElementById('infoStrip');
+  if(toolMode==='build'){
+    const b=BUILDINGS_CONFIG.find(x=>x.id===selectedBuildingId);
+    strip.innerHTML=buildInfoHTML(b); strip.style.display='flex';
+  } else if(toolMode==='demolish'){
+    strip.innerHTML=`<div class="info-icon">🔨</div><div class="info-text"><b>Снос</b><br>Проведите по зданиям, чтобы снести их. Возврат 40% стоимости.</div><button class="cancel-btn" onclick="setToolMode('select')">✖ Отмена</button>`;
+    strip.style.display='flex';
+  } else if(toolMode==='buyland'){
+    strip.innerHTML=`<div class="info-icon">🗺️</div><div class="info-text"><b>Покупка земли</b><br>Коснитесь затуманенной клетки рядом со своей территорией. Следующий участок: ~$${getLandCost()}.</div><button class="cancel-btn" onclick="setToolMode('select')">✖ Отмена</button>`;
+    strip.style.display='flex';
+  } else if(toolMode==='move'){
+    strip.innerHTML=`<div class="info-icon">🔁</div><div class="info-text"><b>Перенос здания</b><br>Коснитесь свободной клетки на своей территории. Стоимость переезда: $${MOVE_COST}.</div><button class="cancel-btn" onclick="cancelMove()">✖ Отмена</button>`;
+    strip.style.display='flex';
+  } else {
+    strip.innerHTML=`<div class="info-icon">👆</div><div class="info-text">Коснитесь здания, чтобы перенести или продать его. Выберите инструмент внизу, чтобы строить, сносить или покупать землю.</div>`;
+    strip.style.display='flex';
+  }
+}
+function setToolMode(mode, bId){
+  toolMode=mode;
+  if(bId!==undefined) selectedBuildingId=bId;
+  document.querySelectorAll('.build-btn').forEach(el=>el.classList.remove('active'));
+  if(mode==='build'){ const btn=document.querySelector(`.build-btn[data-id="${selectedBuildingId}"]`); if(btn) btn.classList.add('active'); }
+  if(mode==='demolish'){ const btn=document.getElementById('demolishBtn'); if(btn) btn.classList.add('active'); }
+  if(mode==='buyland'){ const btn=document.getElementById('buyLandBtn'); if(btn) btn.classList.add('active'); }
+  paintedTilesThisGesture.clear();
+  updateInfoStrip();
+}
 
-                const dx = this.targetGx - this.gx;
-                const dy = this.targetGy - this.gy;
-                const dist = Math.hypot(dx, dy);
+function buildToolbar(){
+  const toolbar=document.getElementById('toolbarRow');
+  toolbar.innerHTML='';
+  BUILDINGS_CONFIG.forEach(b=>{
+    const btn=document.createElement('div');
+    btn.className='build-btn'; btn.dataset.id=b.id;
+    btn.innerHTML=`
+      <div class="btn-emoji">${b.emoji}</div>
+      <div class="btn-name">${b.name}</div>
+      <div class="btn-cost">$${b.cost}</div>
+      <div class="lock-overlay">🔒<span>${b.unlockPop}👥</span></div>`;
+    btn.onclick=()=>{
+      if(resources.pop<b.unlockPop){ sfxError(); showToast(`🔒 Открывается при ${b.unlockPop} жителях`,'warning'); return; }
+      setToolMode('build', b.id);
+    };
+    toolbar.appendChild(btn);
+  });
+  const demBtn=document.createElement('div');
+  demBtn.className='build-btn demolish'; demBtn.id='demolishBtn';
+  demBtn.innerHTML=`<div class="btn-emoji">🔨</div><div class="btn-name">Снести</div><div class="btn-cost" style="color:var(--coral);">40%</div>`;
+  demBtn.onclick=()=>setToolMode('demolish');
+  toolbar.appendChild(demBtn);
 
-                if (dist > 0.08) {
-                    this.gx += (dx / dist) * this.speed * speedMult;
-                    this.gy += (dy / dist) * this.speed * speedMult;
-                    this.isWalking = true;
-                    this.animTimer += 0.25 * speedMult;
-                } else {
-                    // Человечек дошел до дома -> заходит и исчезает
-                    if (this.isHeadingHome) {
-                        this.isDead = true; 
-                        return;
-                    }
+  const landBtn=document.createElement('div');
+  landBtn.className='build-btn landbtn'; landBtn.id='buyLandBtn';
+  landBtn.innerHTML=`<div class="btn-emoji">🗺️</div><div class="btn-name">Земля</div><div class="btn-cost" style="color:var(--sky);">$${getLandCost()}</div>`;
+  landBtn.onclick=()=>setToolMode('buyland');
+  toolbar.appendChild(landBtn);
+}
+function updateToolbarLocks(){
+  document.querySelectorAll('.build-btn[data-id]').forEach(el=>{
+    const conf=BUILDINGS_CONFIG.find(b=>b.id===Number(el.dataset.id));
+    el.classList.toggle('locked', conf && resources.pop<conf.unlockPop);
+  });
+  const landBtn=document.getElementById('buyLandBtn');
+  if(landBtn){ const costEl=landBtn.querySelector('.btn-cost'); if(costEl) costEl.textContent=`$${getLandCost()}`; }
+}
 
-                    this.isWalking = false;
-                    if (Math.random() < 0.05) this.pickNewTarget();
-                }
-            }
+// =========================================================================
+// 13. УКАЗАТЕЛЬ / ВВОД (мышь + сенсор через Pointer Events)
+// =========================================================================
+canvas.addEventListener('wheel',(e)=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+  const worldXBefore=cx-offsetX, worldYBefore=cy-offsetY;
+  const factor=e.deltaY<0?1.12:0.88;
+  const newZoom=Math.min(Math.max(0.35, zoom*factor),2.8);
+  const ratio=newZoom/zoom;
+  offsetX=cx-worldXBefore*ratio; offsetY=cy-worldYBefore*ratio; zoom=newZoom;
+},{passive:false});
 
-            draw(vx, vy) {
-                const tw = BASE_TILE_W * zoom;
-                const th = BASE_TILE_H * zoom;
-                const screenX = (vx - vy) * (tw / 2) + offsetX;
-                const screenY = (vx + vy) * (th / 2) + offsetY;
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
 
-                const bounce = this.isWalking ? Math.abs(Math.sin(this.animTimer)) * (3 * zoom) : 0;
-                const legAngle = this.isWalking ? Math.sin(this.animTimer) * (3 * zoom) : 0;
+function updateHoveredFromClient(clientX,clientY){
+  const rect=canvas.getBoundingClientRect();
+  hoveredTile=toGrid(clientX-rect.left, clientY-rect.top);
+}
 
-                ctx.save();
-                ctx.translate(screenX, screenY - (4 * zoom) - bounce);
+canvas.addEventListener('pointerdown',(e)=>{
+  if(gameOver) return;
+  try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
 
-                // Тень
-                ctx.beginPath();
-                ctx.ellipse(0, 4 * zoom + bounce, 4 * zoom, 2 * zoom, 0, 0, Math.PI * 2);
-                ctx.fillStyle = "rgba(0,0,0,0.3)";
-                ctx.fill();
+  if(pointers.size>=2){
+    isPanning=false;
+    const pts=[...pointers.values()];
+    pinchStartDist=Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    pinchStartZoom=zoom;
+    pinchCenterStart={x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};
+    panOffsetStart={x:offsetX,y:offsetY};
+    return;
+  }
 
-                // Ноги
-                ctx.strokeStyle = "#111";
-                ctx.lineWidth = Math.max(1, 2 * zoom);
-                ctx.beginPath();
-                ctx.moveTo(-1 * zoom, 0); ctx.lineTo(-1 * zoom - legAngle, 4 * zoom);
-                ctx.moveTo(1 * zoom, 0);  ctx.lineTo(1 * zoom + legAngle, 4 * zoom);
-                ctx.stroke();
+  dragStartClient={x:e.clientX,y:e.clientY};
+  dragMovedFlag=false;
+  updateHoveredFromClient(e.clientX,e.clientY);
 
-                // Тело
-                ctx.fillStyle = this.color;
-                ctx.fillRect(-2.5 * zoom, -5 * zoom, 5 * zoom, 5 * zoom);
+  const forcedPan = (e.pointerType==='mouse' && (e.button===1||e.button===2));
+  if(forcedPan || toolMode==='select' || toolMode==='move'){
+    isPanning=true; panStart={x:e.clientX,y:e.clientY}; panOffsetStart={x:offsetX,y:offsetY};
+  } else if(toolMode==='build'||toolMode==='demolish'||toolMode==='buyland'){
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    paintedTilesThisGesture.clear();
+    paintAction(hoveredTile.vx,hoveredTile.vy);
+  }
+});
 
-                // Голова
-                ctx.fillStyle = "#FFCC99";
-                ctx.beginPath();
-                ctx.arc(0, -7.5 * zoom, 2.5 * zoom, 0, Math.PI * 2);
-                ctx.fill();
+canvas.addEventListener('pointermove',(e)=>{
+  if(pointers.has(e.pointerId)) pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  updateHoveredFromClient(e.clientX,e.clientY);
 
-                ctx.restore();
-            }
+  if(pointers.size>=2 && pinchStartDist){
+    const pts=[...pointers.values()];
+    const dist=Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    zoom=Math.min(Math.max(0.35, pinchStartZoom*(dist/pinchStartDist)),2.8);
+    const center={x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};
+    offsetX=panOffsetStart.x+(center.x-pinchCenterStart.x);
+    offsetY=panOffsetStart.y+(center.y-pinchCenterStart.y);
+    return;
+  }
+
+  if(dragStartClient){
+    const dx=e.clientX-dragStartClient.x, dy=e.clientY-dragStartClient.y;
+    if(Math.hypot(dx,dy)>6) dragMovedFlag=true;
+  }
+
+  if(isPanning){
+    offsetX=panOffsetStart.x+(e.clientX-panStart.x);
+    offsetY=panOffsetStart.y+(e.clientY-panStart.y);
+  } else if((toolMode==='build'||toolMode==='demolish'||toolMode==='buyland') && dragMovedFlag){
+    paintAction(hoveredTile.vx,hoveredTile.vy);
+  }
+});
+
+function onPointerEnd(e){
+  const moved=dragMovedFlag;
+  pointers.delete(e.pointerId);
+  if(pointers.size<2) pinchStartDist=null;
+  if(pointers.size===0){
+    isPanning=false;
+    if(!moved && !gameOver){
+      updateHoveredFromClient(e.clientX,e.clientY);
+      if(toolMode==='select'){
+        const {vx,vy}=hoveredTile;
+        if(vx>=0&&vx<GRID_SIZE&&vy>=0&&vy<GRID_SIZE){
+          const real=getRealCoords(vx,vy);
+          if(!owned[real.gy][real.gx]){ showToast('🔒 Территория ещё не куплена — используйте инструмент «Земля» внизу','warning'); closeBuildingPopup(); }
+          else if(grid[real.gy][real.gx]!==0){ openBuildingPopup(real.gx,real.gy,e.clientX,e.clientY); }
+          else { closeBuildingPopup(); }
         }
+      } else if(toolMode==='move'){
+        handleTapMove(hoveredTile.vx,hoveredTile.vy);
+      }
+    }
+    dragStartClient=null; dragMovedFlag=false; paintedTilesThisGesture.clear();
+  }
+}
+window.addEventListener('pointerup', onPointerEnd);
+window.addEventListener('pointercancel', onPointerEnd);
 
-        // =========================================================
-        // 💸 4. ВСПЛЫВАЮЩИЙ ТЕКСТ И ЧАСТИЦЫ
-        // =========================================================
-        function addFloatingText(x, y, text, color) {
-            floatingTexts.push({ x, y, text, color, alpha: 1.0 });
+// =========================================================================
+// 14. ГЛОБАЛЬНЫЕ КНОПКИ (камера/скорость/звук)
+// =========================================================================
+function rotateMap(){ rotation=(rotation+1)%4; }
+function changeZoom(delta){
+  const cx=viewW/2, cy=viewH/2;
+  const worldXBefore=cx-offsetX, worldYBefore=cy-offsetY;
+  const newZoom=Math.min(Math.max(0.35, zoom+delta),2.8);
+  const ratio=newZoom/zoom;
+  offsetX=cx-worldXBefore*ratio; offsetY=cy-worldYBefore*ratio; zoom=newZoom;
+}
+function setSpeed(spd,btn){
+  gameSpeed=spd;
+  document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function toggleSettings(){ document.getElementById('settingsDropdown').classList.toggle('hidden'); }
+window.addEventListener('pointerdown',(e)=>{
+  const dd=document.getElementById('settingsDropdown');
+  if(dd.classList.contains('hidden')) return;
+  if(dd.contains(e.target)) return;
+  if(e.target.closest('#hud') && e.target.textContent==='⚙️') return;
+  dd.classList.add('hidden');
+});
+
+// =========================================================================
+// 15. ЭКОНОМИКА / ИГРОВОЙ ЦИКЛ
+// =========================================================================
+function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+function computeCityTotals(){
+  let foodProd=0, waterProd=0, powerProd=0, powerUse=0, happinessBonus=0, hasSchool=false;
+  for(let y=0;y<GRID_SIZE;y++){
+    for(let x=0;x<GRID_SIZE;x++){
+      const bData=grid[y][x]; if(bData===0) continue;
+      const conf=BUILDINGS_CONFIG.find(b=>b.id===bData.typeId); if(!conf) continue;
+      if(conf.foodProd) foodProd+=conf.foodProd;
+      if(conf.waterProd) waterProd+=conf.waterProd;
+      if(conf.powerProd) powerProd+=conf.powerProd;
+      if(conf.powerUse) powerUse+=conf.powerUse;
+      if(conf.happiness) happinessBonus+=conf.happiness;
+      if(conf.boostGrowth) hasSchool=true;
+    }
+  }
+  return { foodProd, waterProd, powerProd, powerUse, happinessBonus, hasSchool };
+}
+function getHousingCapacity(){
+  let cap=0;
+  for(let y=0;y<GRID_SIZE;y++) for(let x=0;x<GRID_SIZE;x++){
+    const bData=grid[y][x]; if(bData===0) continue;
+    const conf=BUILDINGS_CONFIG.find(b=>b.id===bData.typeId);
+    if(conf && conf.pop>0) cap+=conf.pop;
+  }
+  return cap;
+}
+function computeIncomeRate(incomeMultiplier){
+  let total=0;
+  for(let y=0;y<GRID_SIZE;y++) for(let x=0;x<GRID_SIZE;x++){
+    const bData=grid[y][x]; if(bData===0) continue;
+    const conf=BUILDINGS_CONFIG.find(b=>b.id===bData.typeId); if(!conf) continue;
+    total += conf.money/conf.cycleTime;
+  }
+  return total*incomeMultiplier;
+}
+function triggerRandomEvent(){
+  const ev=EVENTS[Math.floor(Math.random()*EVENTS.length)];
+  if(ev.kind==='instant'){
+    if(ev.money) resources.money+=ev.money;
+    if(ev.water) resources.water=clamp(resources.water+ev.water,0,999);
+  } else {
+    activeBuffs.push({ label:ev.name, happiness:ev.happiness||0, income:ev.income||0, expire: dayTime+ev.duration });
+  }
+  showToast(`${ev.name} — ${ev.desc}`, ev.tone||'event');
+}
+function spawnCitizenFromHouse(){
+  if(citizens.length>=resources.pop) return;
+  for(let y=0;y<GRID_SIZE;y++){
+    for(let x=0;x<GRID_SIZE;x++){
+      const bData=grid[y][x];
+      if(bData!==0 && bData.residents>0){
+        const dirs=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+        for(const d of dirs){
+          const nx=x+d.x, ny=y+d.y;
+          if(nx>=0&&nx<GRID_SIZE&&ny>=0&&ny<GRID_SIZE&&grid[ny][nx]===0){ citizens.push(new Citizen(nx,ny)); return; }
         }
+      }
+    }
+  }
+}
+function triggerGameOver(title,desc){
+  if(gameOver) return;
+  gameOver=true;
+  document.getElementById('gameOverTitle').textContent=title;
+  document.getElementById('gameOverDesc').textContent=desc;
+  document.getElementById('gameOverStats').textContent=
+    `Построено зданий: ${stats.buildingsBuilt} · Население: ${resources.pop} · Деньги: $${Math.round(resources.money)}`;
+  document.getElementById('gameOverScreen').classList.remove('hidden');
+}
 
-        function updateAndDrawFloatingTexts(delta) {
-            for (let i = floatingTexts.length - 1; i >= 0; i--) {
-                let ft = floatingTexts[i];
-                ft.y -= 25 * delta;
-                ft.alpha -= 0.8 * delta;
+function gameTick(now){
+  let delta=(now-lastTime)/1000; delta=Math.min(delta,0.25); lastTime=now;
 
-                if (ft.alpha <= 0) {
-                    floatingTexts.splice(i, 1);
-                    continue;
-                }
+  if(!gameOver && gameSpeed>0){
+    dayTime += delta*gameSpeed;
+    dayCount = Math.floor(dayTime/DAY_LENGTH_SECONDS);
+    const season=getCurrentSeason();
 
-                ctx.save();
-                ctx.globalAlpha = Math.max(0, ft.alpha);
-                ctx.fillStyle = ft.color;
-                ctx.font = `bold ${Math.max(13, 16 * zoom)}px 'Courier New', monospace`;
-                ctx.textAlign = "center";
-                ctx.shadowColor = "#000";
-                ctx.shadowBlur = 4;
-                ctx.fillText(ft.text, ft.x, ft.y);
-                ctx.restore();
-            }
+    for(let i=citizens.length-1;i>=0;i--){ citizens[i].update(delta,gameSpeed); if(citizens[i].isDead) citizens.splice(i,1); }
+
+    for(let i=activeBuffs.length-1;i>=0;i--){ if(activeBuffs[i].expire<=dayTime) activeBuffs.splice(i,1); }
+    let buffHappiness=0, buffIncome=0;
+    activeBuffs.forEach(b=>{ buffHappiness+=b.happiness||0; buffIncome+=b.income||0; });
+
+    const incomeMultiplier=(0.5+(resources.happiness/100))*(1+buffIncome);
+    for(let y=0;y<GRID_SIZE;y++){
+      for(let x=0;x<GRID_SIZE;x++){
+        const bData=grid[y][x]; if(bData===0) continue;
+        bData.timer += delta*gameSpeed;
+        if(bData.timer>=bData.maxTime){
+          bData.timer=0;
+          const payout=Math.round(bData.money*incomeMultiplier);
+          if(payout>0){
+            resources.money+=payout;
+            const vis=getVisualCoords(x,y); const pos=toScreen(vis.vx,vis.vy);
+            addFloatingText(pos.x,pos.y-40*zoom,`+$${payout}`,COLORS.mint);
+            sfxCoin();
+          }
         }
-
-        function addParticles(x, y, color, count) {
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x, y,
-                    vx: (Math.random() - 0.5) * 90,
-                    vy: -Math.random() * 90 - 20,
-                    life: 0.6 + Math.random() * 0.4,
-                    maxLife: 0.6 + Math.random() * 0.4,
-                    color
-                });
-            }
-        }
-
-        function updateAndDrawParticles(delta) {
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.x += p.vx * delta;
-                p.y += p.vy * delta;
-                p.vy += 140 * delta;
-                p.life -= delta;
-                if (p.life <= 0) { particles.splice(i, 1); continue; }
-                ctx.save();
-                ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x - 2 * zoom, p.y - 2 * zoom, 4 * zoom, 4 * zoom);
-                ctx.restore();
-            }
-        }
-
-        // =========================================================
-        // 🔄 5. МАТЕМАТИКА ТРАНСФОРМАЦИИ СЕТКИ
-        // =========================================================
-        function getVisualCoords(gx, gy) {
-            if (rotation === 0) return { vx: gx, vy: gy };
-            if (rotation === 1) return { vx: GRID_SIZE - 1 - gy, vy: gx };
-            if (rotation === 2) return { vx: GRID_SIZE - 1 - gx, vy: GRID_SIZE - 1 - gy };
-            if (rotation === 3) return { vx: gy, vy: GRID_SIZE - 1 - gx };
-        }
-
-        function getRealCoords(vx, vy) {
-            if (rotation === 0) return { gx: vx, gy: vy };
-            if (rotation === 1) return { gx: vy, gy: GRID_SIZE - 1 - vx };
-            if (rotation === 2) return { gx: GRID_SIZE - 1 - vx, gy: GRID_SIZE - 1 - vy };
-            if (rotation === 3) return { gx: GRID_SIZE - 1 - vy, gy: vx };
-        }
-
-        function toScreen(vx, vy) {
-            const tw = BASE_TILE_W * zoom;
-            const th = BASE_TILE_H * zoom;
-            return {
-                x: (vx - vy) * (tw / 2) + offsetX,
-                y: (vx + vy) * (th / 2) + offsetY
-            };
-        }
-
-        function toGrid(screenX, screenY) {
-            const tw = BASE_TILE_W * zoom;
-            const th = BASE_TILE_H * zoom;
-            let adjX = screenX - offsetX;
-            let adjY = screenY - offsetY;
-            let vx = Math.floor((adjX / (tw / 2) + adjY / (th / 2)) / 2);
-            let vy = Math.floor((adjY / (th / 2) - adjX / (tw / 2)) / 2);
-            return { vx, vy };
-        }
-
-        // =========================================================
-        // 🎨 6. ОТРИСОВКА И РЕНДЕР
-        // =========================================================
-        function drawTile(x, y) {
-            const tw = BASE_TILE_W * zoom;
-            const th = BASE_TILE_H * zoom;
-
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + tw/2, y + th/2);
-            ctx.lineTo(x, y + th);
-            ctx.lineTo(x - tw/2, y + th/2);
-            ctx.closePath();
-            ctx.fillStyle = "#5c8a27";
-            ctx.fill();
-            ctx.strokeStyle = "rgba(0,0,0,0.12)";
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(x - tw/2, y + th/2);
-            ctx.lineTo(x, y + th);
-            ctx.lineTo(x, y + th + 6 * zoom);
-            ctx.lineTo(x - tw/2, y + th/2 + 6 * zoom);
-            ctx.fillStyle = "#43661b";
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(x, y + th);
-            ctx.lineTo(x + tw/2, y + th/2);
-            ctx.lineTo(x + tw/2, y + th/2 + 6 * zoom);
-            ctx.lineTo(x, y + th + 6 * zoom);
-            ctx.fillStyle = "#334e14";
-            ctx.fill();
-        }
-
-        function drawFallbackBuilding(x, y) {
-            const tw = BASE_TILE_W * zoom;
-            const th = BASE_TILE_H * zoom;
-            let h = 35 * zoom;
-
-            ctx.fillStyle = "#aaaaaa";
-            ctx.beginPath();
-            ctx.moveTo(x, y - h);
-            ctx.lineTo(x + tw/2, y + th/2 - h);
-            ctx.lineTo(x, y + th - h);
-            ctx.lineTo(x - tw/2, y + th/2 - h);
-            ctx.fill();
-
-            ctx.fillStyle = "#888888";
-            ctx.beginPath();
-            ctx.moveTo(x - tw/2, y + th/2 - h);
-            ctx.lineTo(x, y + th - h);
-            ctx.lineTo(x, y + th);
-            ctx.lineTo(x - tw/2, y + th/2);
-            ctx.fill();
-
-            ctx.fillStyle = "#666666";
-            ctx.beginPath();
-            ctx.moveTo(x, y + th - h);
-            ctx.lineTo(x + tw/2, y + th/2 - h);
-            ctx.lineTo(x + tw/2, y + th/2);
-            ctx.lineTo(x, y + th);
-            ctx.fill();
-        }
-
-        // Отрисовка полоски времени и жильцов над зданием
-        function drawBuildingUI(pos, renderH, bData) {
-            const barW = 44 * zoom;
-            const barH = 6 * zoom;
-            const barX = pos.x - barW / 2;
-            const barY = pos.y - renderH - 12 * zoom;
-
-            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-            ctx.fillRect(barX, barY, barW, barH);
-            ctx.strokeStyle = "#fff";
-            ctx.lineWidth = 1;
-            ctx.strokeRect(barX, barY, barW, barH);
-
-            const progress = bData.timer / bData.maxTime;
-            ctx.fillStyle = "#4EFE83";
-            ctx.fillRect(barX + 1, barY + 1, Math.max(0, (barW - 2) * progress), barH - 2);
-
-            if (bData.residents > 0) {
-                ctx.fillStyle = "#FFB74D";
-                ctx.font = `bold ${Math.max(10, 11 * zoom)}px 'Courier New', monospace`;
-                ctx.textAlign = "center";
-                ctx.fillText(`👥 ${bData.residents}`, pos.x, barY - 4 * zoom);
-            }
-        }
-
-        function getNightColor() {
-            // 0..1 цикл: 0 = полдень, 0.5 = полночь
-            const cycle = (dayTime / DAY_LENGTH_SECONDS) % 1;
-            const darkness = (Math.cos(cycle * Math.PI * 2) * -1 + 1) / 2; // 0 днём, 1 ночью
-            const alpha = darkness * 0.55;
-            return `rgba(15, 20, 60, ${alpha.toFixed(3)})`;
-        }
-
-        function renderLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            for (let vy = 0; vy < GRID_SIZE; vy++) {
-                for (let vx = 0; vx < GRID_SIZE; vx++) {
-                    let pos = toScreen(vx, vy);
-                    let real = getRealCoords(vx, vy);
-
-                    drawTile(pos.x, pos.y);
-
-                    if (vx === hoveredTile.vx && vy === hoveredTile.vy) {
-                        const tw = BASE_TILE_W * zoom;
-                        const th = BASE_TILE_H * zoom;
-                        ctx.fillStyle = demolishMode ? "rgba(255, 82, 82, 0.4)" : "rgba(255, 255, 255, 0.4)";
-                        ctx.beginPath();
-                        ctx.moveTo(pos.x, pos.y);
-                        ctx.lineTo(pos.x + tw/2, pos.y + th/2);
-                        ctx.lineTo(pos.x, pos.y + th);
-                        ctx.lineTo(pos.x - tw/2, pos.y + th/2);
-                        ctx.fill();
-                    }
-
-                    let bData = grid[real.gy][real.gx];
-                    if (bData !== 0) {
-                        let conf = BUILDINGS_CONFIG.find(item => item.id === bData.typeId);
-                        let img = loadedImages[bData.typeId];
-                        let renderH = 35 * zoom;
-
-                        // Анимация появления здания (масштаб от 0 до 1)
-                        let scaleAnim = 1;
-                        if (bData.buildAnim < 1) {
-                            bData.buildAnim = Math.min(1, bData.buildAnim + 0.06);
-                            scaleAnim = 0.4 + bData.buildAnim * 0.6;
-                        }
-
-                        ctx.save();
-                        if (scaleAnim < 1) {
-                            ctx.translate(pos.x, pos.y);
-                            ctx.scale(scaleAnim, scaleAnim);
-                            ctx.translate(-pos.x, -pos.y);
-                        }
-
-                        if (!conf || conf.isBroken || !img.complete || img.naturalWidth === 0) {
-                            drawFallbackBuilding(pos.x, pos.y);
-                        } else {
-                            const tw = BASE_TILE_W * zoom;
-                            let renderW = tw; 
-                            renderH = img.height * (renderW / img.width); 
-                            ctx.drawImage(img, pos.x - renderW / 2, pos.y - renderH + (BASE_TILE_H * zoom), renderW, renderH);
-                        }
-                        ctx.restore();
-
-                        drawBuildingUI(pos, renderH, bData);
-                    }
-
-                    citizens.forEach(c => {
-                        let cVis = getVisualCoords(c.gx, c.gy);
-                        if (Math.floor(cVis.vx) === vx && Math.floor(cVis.vy) === vy) {
-                            c.draw(cVis.vx, cVis.vy);
-                        }
-                    });
-                }
-            }
-
-            updateAndDrawFloatingTexts(0.016);
-            updateAndDrawParticles(0.016);
-
-            // День/ночь
-            document.getElementById('nightOverlay').style.background = getNightColor();
-
-            drawMinimap();
-
-            requestAnimationFrame(renderLoop);
-        }
-
-        function drawMinimap() {
-            minimapCtx.clearRect(0, 0, 96, 96);
-            const cell = 96 / GRID_SIZE;
-            minimapCtx.fillStyle = '#213a0d';
-            minimapCtx.fillRect(0, 0, 96, 96);
-            for (let y = 0; y < GRID_SIZE; y++) {
-                for (let x = 0; x < GRID_SIZE; x++) {
-                    let bData = grid[y][x];
-                    if (bData !== 0) {
-                        const conf = BUILDINGS_CONFIG.find(b => b.id === bData.typeId);
-                        let color = '#FFD54F';
-                        if (conf) {
-                            if (conf.pop > 0) color = '#FFB74D';
-                            else if (conf.foodProd) color = '#8BC34A';
-                            else if (conf.waterProd) color = '#4FC3F7';
-                            else if (conf.powerProd) color = '#FFEB3B';
-                            else if (conf.happiness > 0) color = '#FF8AD8';
-                            else color = '#B0BEC5';
-                        }
-                        minimapCtx.fillStyle = color;
-                        minimapCtx.fillRect(x * cell, y * cell, cell - 0.5, cell - 0.5);
-                    }
-                }
-            }
-        }
-
-        // =========================================================
-        // 🎮 7. ВЗАИМОДЕЙСТВИЕ (КЛИКИ, ЗУМ, СЕНСОРНЫЙ ВВОД)
-        // =========================================================
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            let zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
-            zoom = Math.min(Math.max(0.4, zoom * zoomFactor), 2.8);
-        }, { passive: false });
-
-        function tryInteractTile(vx, vy) {
-            if (gameOver) return;
-            if (vx < 0 || vx >= GRID_SIZE || vy < 0 || vy >= GRID_SIZE) return;
-            let real = getRealCoords(vx, vy);
-
-            if (demolishMode) {
-                let bData = grid[real.gy][real.gx];
-                if (bData !== 0) {
-                    const conf = BUILDINGS_CONFIG.find(b => b.id === bData.typeId);
-                    const refund = conf ? Math.round(conf.cost * DEMOLISH_REFUND_RATE) : 0;
-                    resources.money += refund;
-                    resources.pop = Math.max(0, resources.pop - bData.residents);
-
-                    const pos = toScreen(vx, vy);
-                    addParticles(pos.x, pos.y - 15 * zoom, '#FF5252', 10);
-                    addFloatingText(pos.x, pos.y - 30 * zoom, `+$${refund}`, "#FFD54F");
-                    sfxDemolish();
-
-                    grid[real.gy][real.gx] = 0;
-                    updateHUD();
-                }
-                return;
-            }
-
-            if (grid[real.gy][real.gx] === 0) {
-                let b = BUILDINGS_CONFIG.find(item => item.id === selectedBuildingId);
-                if (b && resources.money >= b.cost) {
-                    resources.money -= b.cost;
-                    resources.pop += b.pop;
-
-                    grid[real.gy][real.gx] = {
-                        typeId: b.id,
-                        timer: 0,
-                        maxTime: b.cycleTime,
-                        money: b.money,
-                        residents: b.pop,
-                        buildAnim: 0
-                    };
-                    stats.buildingsBuilt++;
-
-                    const pos = toScreen(vx, vy);
-                    addParticles(pos.x, pos.y - 10 * zoom, '#4EFE83', 8);
-                    sfxBuild();
-                    checkAchievements();
-                    updateHUD();
-                } else if (b) {
-                    sfxError();
-                    showToast('Недостаточно денег!', 'warning');
-                }
-            }
-        }
-
-        canvas.addEventListener('mousedown', (e) => {
-            if (e.button === 2 || e.button === 1) {
-                isDragging = true;
-                dragStartX = e.clientX - offsetX;
-                dragStartY = e.clientY - offsetY;
-            } else if (e.button === 0) {
-                tryInteractTile(hoveredTile.vx, hoveredTile.vy);
-            }
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                offsetX = e.clientX - dragStartX;
-                offsetY = e.clientY - dragStartY;
-            }
-            const rect = canvas.getBoundingClientRect();
-            hoveredTile = toGrid(e.clientX - rect.left, e.clientY - rect.top);
-        });
-
-        window.addEventListener('mouseup', () => isDragging = false);
-        canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-        // --- Сенсорное управление (мобильные) ---
-        let touchStartDist = null;
-        let touchStartZoom = 1;
-
-        canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
-                const t = e.touches[0];
-                isDragging = true;
-                dragMoved = false;
-                dragStartX = t.clientX - offsetX;
-                dragStartY = t.clientY - offsetY;
-                const rect = canvas.getBoundingClientRect();
-                hoveredTile = toGrid(t.clientX - rect.left, t.clientY - rect.top);
-            } else if (e.touches.length === 2) {
-                isDragging = false;
-                const dx = e.touches[0].clientX - e.touches[1].clientX;
-                const dy = e.touches[0].clientY - e.touches[1].clientY;
-                touchStartDist = Math.hypot(dx, dy);
-                touchStartZoom = zoom;
-            }
-        }, { passive: true });
-
-        canvas.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1 && isDragging) {
-                const t = e.touches[0];
-                offsetX = t.clientX - dragStartX;
-                offsetY = t.clientY - dragStartY;
-                dragMoved = true;
-                const rect = canvas.getBoundingClientRect();
-                hoveredTile = toGrid(t.clientX - rect.left, t.clientY - rect.top);
-            } else if (e.touches.length === 2 && touchStartDist) {
-                const dx = e.touches[0].clientX - e.touches[1].clientX;
-                const dy = e.touches[0].clientY - e.touches[1].clientY;
-                const dist = Math.hypot(dx, dy);
-                zoom = Math.min(Math.max(0.4, touchStartZoom * (dist / touchStartDist)), 2.8);
-            }
-        }, { passive: true });
-
-        canvas.addEventListener('touchend', (e) => {
-            if (!dragMoved && isDragging) {
-                tryInteractTile(hoveredTile.vx, hoveredTile.vy);
-            }
-            isDragging = false;
-            touchStartDist = null;
-        });
-
-        function rotateMap() { rotation = (rotation + 1) % 4; }
-        function changeZoom(delta) { zoom = Math.min(Math.max(0.4, zoom + delta), 2.8); }
-        function setSpeed(spd, btn) {
-            gameSpeed = spd;
-            document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
-
-        // =========================================================
-        // ⏱️ 8. ИГРОВОЙ ЦИКЛ, ЭКОНОМИКА, СЧАСТЬЕ, ГЕЙМ-ОВЕР
-        // =========================================================
-        let lastTime = performance.now();
-        let spawnTimer = 0;
-        let growthTimer = 0;
-        let hardshipTimer = 0; // сколько времени подряд ресурсы в минусе
-
-        function computeCityTotals() {
-            let foodProd = 0, waterProd = 0, powerProd = 0, powerUse = 0, happinessBonus = 0;
-            for (let y = 0; y < GRID_SIZE; y++) {
-                for (let x = 0; x < GRID_SIZE; x++) {
-                    const bData = grid[y][x];
-                    if (bData !== 0) {
-                        const conf = BUILDINGS_CONFIG.find(b => b.id === bData.typeId);
-                        if (!conf) continue;
-                        if (conf.foodProd) foodProd += conf.foodProd;
-                        if (conf.waterProd) waterProd += conf.waterProd;
-                        if (conf.powerProd) powerProd += conf.powerProd;
-                        if (conf.powerUse) powerUse += conf.powerUse;
-                        if (conf.happiness) happinessBonus += conf.happiness;
-                    }
-                }
-            }
-            return { foodProd, waterProd, powerProd, powerUse, happinessBonus };
-        }
-
-        function gameTick(now) {
-            let delta = (now - lastTime) / 1000;
-            delta = Math.min(delta, 0.25); // защита от скачков при смене вкладки
-            lastTime = now;
-
-            if (!gameOver && gameSpeed > 0) {
-                dayTime += delta * gameSpeed;
-
-                // 1. Человечки
-                for (let i = citizens.length - 1; i >= 0; i--) {
-                    citizens[i].update(delta, gameSpeed);
-                    if (citizens[i].isDead) citizens.splice(i, 1);
-                }
-
-                // 2. Таймеры зданий -> доход (с учётом счастья)
-                const incomeMultiplier = 0.5 + (resources.happiness / 100);
-                for (let y = 0; y < GRID_SIZE; y++) {
-                    for (let x = 0; x < GRID_SIZE; x++) {
-                        let bData = grid[y][x];
-                        if (bData !== 0) {
-                            bData.timer += delta * gameSpeed;
-                            if (bData.timer >= bData.maxTime) {
-                                bData.timer = 0;
-                                const payout = Math.round(bData.money * incomeMultiplier);
-                                if (payout > 0) {
-                                    resources.money += payout;
-                                    let vis = getVisualCoords(x, y);
-                                    let pos = toScreen(vis.vx, vis.vy);
-                                    addFloatingText(pos.x, pos.y - 40 * zoom, `+$${payout}`, "#4EFE83");
-                                    sfxCoin();
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 3. Экономика ресурсов: производство/потребление
-                const totals = computeCityTotals();
-                const foodDelta = totals.foodProd - resources.pop * FOOD_PER_POP;
-                const waterDelta = totals.waterProd - resources.pop * WATER_PER_POP;
-                const powerDelta = totals.powerProd - totals.powerUse;
-
-                resources.food = clamp(resources.food + foodDelta * delta * gameSpeed, 0, 999);
-                resources.water = clamp(resources.water + waterDelta * delta * gameSpeed, 0, 999);
-                resources.power = clamp(resources.power + powerDelta * delta * gameSpeed, 0, 999);
-
-                // 4. Счастье города
-                let targetHappiness = 50 + totals.happinessBonus;
-                if (resources.food <= 0.5) targetHappiness -= 25;
-                if (resources.water <= 0.5) targetHappiness -= 25;
-                if (resources.power < 0) targetHappiness -= 15;
-                targetHappiness = clamp(targetHappiness, 0, 100);
-                resources.happiness += (targetHappiness - resources.happiness) * Math.min(1, delta * gameSpeed * 0.5);
-                resources.happiness = clamp(resources.happiness, 0, 100);
-
-                // 5. Рост / отток населения
-                growthTimer += delta * gameSpeed;
-                if (growthTimer >= 6) {
-                    growthTimer = 0;
-                    const capacity = getHousingCapacity();
-                    if (resources.happiness >= 55 && resources.food > 1 && resources.water > 1 && resources.pop < capacity) {
-                        const grow = Math.min(capacity - resources.pop, Math.ceil(Math.random() * 2));
-                        resources.pop += grow;
-                        if (grow > 0) showToast(`👋 В город переехало ${grow} ${grow === 1 ? 'житель' : 'жителя'}!`);
-                    } else if ((resources.food <= 0 || resources.water <= 0) && resources.pop > 0) {
-                        const leave = Math.min(resources.pop, Math.ceil(resources.pop * 0.08));
-                        resources.pop -= leave;
-                        if (leave > 0) showToast(`⚠️ ${leave} жителей покинули город из-за нехватки ресурсов!`, 'warning');
-                    }
-                }
-
-                // 6. Проверка кризиса (для гейм-овера)
-                if (resources.money < 0 || (resources.pop === 0 && stats.buildingsBuilt > 0 && (resources.food <= 0 || resources.water <= 0))) {
-                    hardshipTimer += delta * gameSpeed;
-                } else {
-                    hardshipTimer = 0;
-                }
-
-                if (resources.money < -50) {
-                    triggerGameOver('БАНКРОТСТВО', 'Ваш город потратил больше денег, чем заработал.');
-                } else if (stats.buildingsBuilt >= 3 && resources.pop === 0 && hardshipTimer > 8) {
-                    triggerGameOver('ГОРОД ОПУСТЕЛ', 'Все жители покинули город из-за нехватки ресурсов.');
-                }
-
-                // 7. Спавн человечков
-                spawnTimer += delta * gameSpeed;
-                if (spawnTimer >= 3.5) {
-                    spawnTimer = 0;
-                    spawnCitizenFromHouse();
-                }
-
-                checkAchievements();
-                updateHUD();
-            }
-
-            requestAnimationFrame(gameTick);
-        }
-
-        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-
-        function getHousingCapacity() {
-            let cap = 0;
-            for (let y = 0; y < GRID_SIZE; y++) {
-                for (let x = 0; x < GRID_SIZE; x++) {
-                    const bData = grid[y][x];
-                    if (bData !== 0) {
-                        const conf = BUILDINGS_CONFIG.find(b => b.id === bData.typeId);
-                        if (conf && conf.pop > 0) cap += conf.pop;
-                    }
-                }
-            }
-            return cap;
-        }
-
-        function spawnCitizenFromHouse() {
-            if (citizens.length >= resources.pop) return;
-
-            for (let y = 0; y < GRID_SIZE; y++) {
-                for (let x = 0; x < GRID_SIZE; x++) {
-                    let bData = grid[y][x];
-                    if (bData !== 0 && bData.residents > 0) {
-                        const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
-                        for (let d of dirs) {
-                            let nx = x + d.x;
-                            let ny = y + d.y;
-                            if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && grid[ny][nx] === 0) {
-                                citizens.push(new Citizen(nx, ny));
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        function triggerGameOver(title, desc) {
-            if (gameOver) return;
-            gameOver = true;
-            document.getElementById('gameOverTitle').textContent = title;
-            document.getElementById('gameOverDesc').textContent = desc;
-            document.getElementById('gameOverStats').textContent =
-                `Построено зданий: ${stats.buildingsBuilt} · Максимум жителей: ${resources.pop} · Деньги: $${Math.round(resources.money)}`;
-            document.getElementById('gameOverScreen').style.display = "flex";
-        }
-
-        function updateHUD() {
-            document.getElementById('valMoney').innerText = Math.round(resources.money);
-            document.getElementById('valPop').innerText = resources.pop;
-            document.getElementById('valFood').innerText = resources.food.toFixed(1);
-            document.getElementById('valWater').innerText = resources.water.toFixed(1);
-            document.getElementById('valPower').innerText = resources.power.toFixed(1);
-            document.getElementById('valHappy').innerText = Math.round(resources.happiness);
-
-            document.getElementById('resFood').classList.toggle('warn', resources.food <= 3);
-            document.getElementById('resWater').classList.toggle('warn', resources.water <= 3);
-            document.getElementById('resPower').classList.toggle('warn', resources.power < 0);
-            document.getElementById('resHappy').classList.toggle('warn', resources.happiness <= 20);
-        }
-
-        function resetGame() {
-            resources = { ...START_RESOURCES };
-            grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
-            citizens.length = 0;
-            floatingTexts.length = 0;
-            particles.length = 0;
-            stats = { buildingsBuilt: 0 };
-            unlockedAchievements.clear();
-            gameOver = false;
-            hardshipTimer = 0;
-            dayTime = 0;
-
-            updateHUD();
-            document.getElementById('gameOverScreen').style.display = "none";
-        }
-
-        // =========================================================
-        // 💾 9. СОХРАНЕНИЕ / ЗАГРУЗКА (файл JSON, без localStorage)
-        // =========================================================
-        function saveGame() {
-            const save = {
-                resources, grid, rotation, zoom, dayTime, stats,
-                unlocked: Array.from(unlockedAchievements),
-                version: 1
-            };
-            const blob = new Blob([JSON.stringify(save)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'pixel-city-save.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('💾 Игра сохранена в файл!');
-        }
-
-        function loadGameFromFile(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    resources = data.resources || { ...START_RESOURCES };
-                    grid = data.grid || Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
-                    // на случай старого сохранения без buildAnim
-                    for (let y = 0; y < GRID_SIZE; y++) {
-                        for (let x = 0; x < GRID_SIZE; x++) {
-                            if (grid[y][x] !== 0 && grid[y][x].buildAnim === undefined) grid[y][x].buildAnim = 1;
-                        }
-                    }
-                    rotation = data.rotation || 0;
-                    zoom = data.zoom || 1;
-                    dayTime = data.dayTime || 0;
-                    stats = data.stats || { buildingsBuilt: 0 };
-                    unlockedAchievements.clear();
-                    (data.unlocked || []).forEach(id => unlockedAchievements.add(id));
-                    citizens.length = 0;
-                    gameOver = false;
-                    document.getElementById('gameOverScreen').style.display = "none";
-                    updateHUD();
-                    showToast('📂 Игра загружена!');
-                } catch (err) {
-                    showToast('Ошибка загрузки файла!', 'warning');
-                }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-
-        // =========================================================
-        // 🚀 10. ИНИЦИАЛИЗАЦИЯ ПРИ ЗАПУСКЕ
-        // =========================================================
-        function initApp() {
-            const toolbar = document.getElementById('toolbar');
-
-            BUILDINGS_CONFIG.forEach(b => {
-                const img = new Image();
-                img.src = `${IMAGE_FOLDER}${b.file}`;
-                img.onerror = () => { b.isBroken = true; };
-                loadedImages[b.id] = img;
-
-                const btn = document.createElement('div');
-                btn.className = `build-btn ${b.id === selectedBuildingId ? 'active' : ''}`;
-                btn.onclick = () => {
-                    selectedBuildingId = b.id;
-                    demolishMode = false;
-                    document.querySelectorAll('.build-btn').forEach(el => el.classList.remove('active'));
-                    btn.classList.add('active');
-                };
-                btn.innerHTML = `
-                    <img src="${IMAGE_FOLDER}${b.file}" onerror="this.style.display='none'">
-                    <div class="btn-name">${b.name}</div>
-                    <div class="btn-cost">$${b.cost}</div>
-                `;
-                toolbar.appendChild(btn);
-            });
-
-            // Кнопка сноса
-            const demBtn = document.createElement('div');
-            demBtn.className = 'build-btn demolish';
-            demBtn.innerHTML = `
-                <div style="font-size:26px;line-height:1;">🔨</div>
-                <div class="btn-name">Снести</div>
-                <div class="btn-cost" style="color:#FF5252;">40% возврат</div>
-            `;
-            demBtn.onclick = () => {
-                demolishMode = true;
-                document.querySelectorAll('.build-btn').forEach(el => el.classList.remove('active'));
-                demBtn.classList.add('active');
-            };
-            toolbar.appendChild(demBtn);
-
-            resetGame();
-            resizeCanvas();
-            requestAnimationFrame(renderLoop);
-            lastTime = performance.now();
-            requestAnimationFrame(gameTick);
-        }
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            ctx.imageSmoothingEnabled = false;
-            offsetX = canvas.width / 2;
-            offsetY = canvas.height / 3;
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        window.onload = initApp;
-    </script>
+      }
+    }
+
+    const totals=computeCityTotals();
+    const foodDelta=totals.foodProd*season.food - resources.pop*FOOD_PER_POP;
+    const waterDelta=totals.waterProd*season.water - resources.pop*WATER_PER_POP;
+    const powerDelta=totals.powerProd - totals.powerUse;
+    resources.food=clamp(resources.food+foodDelta*delta*gameSpeed,0,999);
+    resources.water=clamp(resources.water+waterDelta*delta*gameSpeed,0,999);
+    resources.power=clamp(resources.power+powerDelta*delta*gameSpeed,0,999);
+
+    let targetHappiness=50+totals.happinessBonus+season.happy+buffHappiness;
+    if(resources.food<=0.5) targetHappiness-=25;
+    if(resources.water<=0.5) targetHappiness-=25;
+    if(resources.power<0) targetHappiness-=15;
+    targetHappiness=clamp(targetHappiness,0,100);
+    resources.happiness += (targetHappiness-resources.happiness)*Math.min(1, delta*gameSpeed*0.5);
+    resources.happiness=clamp(resources.happiness,0,100);
+
+    growthTimer += delta*gameSpeed;
+    const growthInterval = totals.hasSchool ? 4 : 6;
+    if(growthTimer>=growthInterval){
+      growthTimer=0;
+      const capacity=getHousingCapacity();
+      if(resources.happiness>=55 && resources.food>1 && resources.water>1 && resources.pop<capacity){
+        const grow=Math.min(capacity-resources.pop, Math.ceil(Math.random()*(totals.hasSchool?3:2)));
+        resources.pop+=grow;
+        if(grow>0) showToast(`👋 В город переехало ${grow} ${pluralPeople(grow)}!`);
+      } else if((resources.food<=0||resources.water<=0) && resources.pop>0){
+        const leave=Math.min(resources.pop, Math.ceil(resources.pop*0.08));
+        resources.pop-=leave;
+        if(leave>0) showToast(`⚠️ ${leave} ${pluralPeople(leave)} покинули город из-за нехватки ресурсов!`,'warning');
+      }
+    }
+
+    if(resources.money<0 || (resources.pop===0 && stats.buildingsBuilt>0 && (resources.food<=0||resources.water<=0))) hardshipTimer+=delta*gameSpeed;
+    else hardshipTimer=0;
+
+    if(resources.money<-50) triggerGameOver('БАНКРОТСТВО','Ваш город потратил больше денег, чем заработал.');
+    else if(stats.buildingsBuilt>=3 && resources.pop===0 && hardshipTimer>8) triggerGameOver('ГОРОД ОПУСТЕЛ','Все жители покинули город из-за нехватки ресурсов.');
+
+    spawnTimer += delta*gameSpeed;
+    if(spawnTimer>=3.5){ spawnTimer=0; spawnCitizenFromHouse(); }
+
+    eventTimer += delta*gameSpeed;
+    if(eventTimer>=nextEventAt){ eventTimer=0; nextEventAt=45+Math.random()*45; triggerRandomEvent(); }
+
+    checkAchievements();
+    updateHUD();
+    updateToolbarLocks();
+    if(toolMode==='build') updateInfoStrip();
+  }
+
+  requestAnimationFrame(gameTick);
+}
+
+function setRateArrow(elId,net){
+  const el=document.getElementById(elId); if(!el) return;
+  const arrowEl=el.querySelector('.rate-arrow'); if(!arrowEl) return;
+  if(net>0.02){ arrowEl.textContent='▲'; arrowEl.style.color=COLORS.mint; }
+  else if(net<-0.02){ arrowEl.textContent='▼'; arrowEl.style.color=COLORS.coral; }
+  else { arrowEl.textContent='—'; arrowEl.style.color=COLORS.dim; }
+}
+function updateHUD(){
+  document.getElementById('valMoney').innerText=Math.round(resources.money);
+  document.getElementById('valPop').innerText=resources.pop;
+  document.getElementById('valCap').innerText=getHousingCapacity();
+  document.getElementById('valFood').innerText=resources.food.toFixed(1);
+  document.getElementById('valWater').innerText=resources.water.toFixed(1);
+  document.getElementById('valPower').innerText=resources.power.toFixed(1);
+  document.getElementById('valHappy').innerText=Math.round(resources.happiness);
+
+  document.getElementById('resFood').classList.toggle('warn',resources.food<=3);
+  document.getElementById('resWater').classList.toggle('warn',resources.water<=3);
+  document.getElementById('resPower').classList.toggle('warn',resources.power<0);
+  document.getElementById('resHappy').classList.toggle('warn',resources.happiness<=20);
+
+  const totals=computeCityTotals();
+  const season=getCurrentSeason();
+  setRateArrow('resFood', totals.foodProd*season.food - resources.pop*FOOD_PER_POP);
+  setRateArrow('resWater', totals.waterProd*season.water - resources.pop*WATER_PER_POP);
+  setRateArrow('resPower', totals.powerProd - totals.powerUse);
+
+  const cycle=(dayTime/DAY_LENGTH_SECONDS)%1;
+  const hour=(12+cycle*24)%24;
+  const hh=String(Math.floor(hour)).padStart(2,'0');
+  const mm=String(Math.floor((hour%1)*60)).padStart(2,'0');
+  document.getElementById('timeDisplay').textContent=`${getDarkness()>0.5?'🌙':'☀️'} ${hh}:${mm}`;
+  document.getElementById('seasonDisplay').textContent=`${season.emoji} ${season.name}`;
+}
+
+// =========================================================================
+// 16. СОХРАНЕНИЕ / АВТОСОХРАНЕНИЕ
+// =========================================================================
+const AUTOSAVE_KEY='pixelcity-autosave-v2';
+const TUTORIAL_KEY='pixelcity-tutorial-seen';
+
+function freshGrid(){ return Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0)); }
+function freshOwned(){
+  const o=Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(false));
+  const start=Math.floor((GRID_SIZE-OWNED_START_SIZE)/2);
+  for(let y=start;y<start+OWNED_START_SIZE;y++) for(let x=start;x<start+OWNED_START_SIZE;x++) o[y][x]=true;
+  return o;
+}
+function buildSaveObject(){
+  return {
+    resources, grid, owned, rotation, zoom, dayTime, stats,
+    unlocked: Array.from(unlockedAchievements), activeBuffs, version:2
+  };
+}
+function applySaveData(data){
+  resources = data.resources || { ...START_RESOURCES };
+  grid = data.grid || freshGrid();
+  owned = data.owned || freshOwned();
+  for(let y=0;y<GRID_SIZE;y++) for(let x=0;x<GRID_SIZE;x++){ if(grid[y][x]!==0 && grid[y][x].buildAnim===undefined) grid[y][x].buildAnim=1; }
+  rotation = data.rotation || 0;
+  zoom = data.zoom || zoom;
+  dayTime = data.dayTime || 0;
+  dayCount = Math.floor(dayTime/DAY_LENGTH_SECONDS);
+  stats = data.stats || { buildingsBuilt:0, landBought:0, ownedCount:INITIAL_OWNED_COUNT };
+  unlockedAchievements.clear(); (data.unlocked||[]).forEach(id=>unlockedAchievements.add(id));
+  activeBuffs = data.activeBuffs || [];
+  citizens.length=0; gameOver=false;
+  document.getElementById('gameOverScreen').classList.add('hidden');
+  closeBuildingPopup(); movingFrom=null; setToolMode('select');
+  updateHUD(); updateToolbarLocks(); updateGoalBar();
+}
+function saveGame(){
+  const blob=new Blob([JSON.stringify(buildSaveObject())],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='pixel-city-save.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('💾 Игра сохранена в файл!');
+}
+function loadGameFromFile(event){
+  const file=event.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{ applySaveData(JSON.parse(e.target.result)); showToast('📂 Игра загружена!'); }
+    catch(err){ showToast('Ошибка загрузки файла!','warning'); }
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+async function autoSave(){
+  try{ await window.storage.set(AUTOSAVE_KEY, JSON.stringify(buildSaveObject()), false); }
+  catch(e){ /* хранилище недоступно — не критично, есть ручное сохранение в файл */ }
+}
+async function autoLoad(){
+  try{
+    const res=await window.storage.get(AUTOSAVE_KEY, false);
+    if(res && res.value){ applySaveData(JSON.parse(res.value)); showToast('💾 Прогресс восстановлен'); return true; }
+  }catch(e){ /* сохранения ещё нет */ }
+  return false;
+}
+
+// =========================================================================
+// 17. ОБУЧЕНИЕ
+// =========================================================================
+function renderTutorialSlide(){
+  const s=TUTORIAL_SLIDES[tutorialStep];
+  document.getElementById('tutIcon').textContent=s.icon;
+  document.getElementById('tutTitle').textContent=s.title;
+  document.getElementById('tutText').textContent=s.text;
+  document.getElementById('tutNextBtn').textContent = tutorialStep===TUTORIAL_SLIDES.length-1 ? 'Начать!' : 'Далее';
+  const dots=document.getElementById('tutDots');
+  dots.innerHTML='';
+  TUTORIAL_SLIDES.forEach((_,i)=>{
+    const d=document.createElement('div'); d.className='dot'+(i===tutorialStep?' active':''); dots.appendChild(d);
+  });
+}
+function tutorialNext(){
+  if(tutorialStep<TUTORIAL_SLIDES.length-1){ tutorialStep++; renderTutorialSlide(); }
+  else { closeTutorial(); }
+}
+function openTutorial(){
+  tutorialStep=0; renderTutorialSlide();
+  document.getElementById('tutorialModal').classList.remove('hidden');
+}
+async function closeTutorial(){
+  document.getElementById('tutorialModal').classList.add('hidden');
+  try{ await window.storage.set(TUTORIAL_KEY,'1',false); }catch(e){}
+}
+async function maybeShowTutorial(){
+  try{
+    const res=await window.storage.get(TUTORIAL_KEY,false);
+    if(res && res.value==='1') return;
+  }catch(e){}
+  openTutorial();
+}
+
+// =========================================================================
+// 18. СБРОС / ИНИЦИАЛИЗАЦИЯ
+// =========================================================================
+function resetGame(){
+  resources={ ...START_RESOURCES };
+  grid=freshGrid(); owned=freshOwned();
+  citizens.length=0; floatingTexts.length=0; particles.length=0;
+  stats={ buildingsBuilt:0, landBought:0, ownedCount:INITIAL_OWNED_COUNT };
+  unlockedAchievements.clear(); activeBuffs=[];
+  gameOver=false; hardshipTimer=0; growthTimer=0; spawnTimer=0;
+  dayTime=0; dayCount=0; eventTimer=0; nextEventAt=45+Math.random()*45;
+  closeBuildingPopup(); movingFrom=null; setToolMode('select');
+  updateHUD(); updateToolbarLocks(); updateGoalBar();
+  document.getElementById('gameOverScreen').classList.add('hidden');
+}
+
+function resizeCanvas(){
+  const rect=gameAreaEl.getBoundingClientRect();
+  viewW=rect.width; viewH=rect.height;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=Math.max(1,Math.round(viewW*dpr));
+  canvas.height=Math.max(1,Math.round(viewH*dpr));
+  canvas.style.width=viewW+'px'; canvas.style.height=viewH+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.imageSmoothingEnabled=false;
+  if(!initialOffsetSet){
+    offsetX=viewW/2; offsetY=viewH/2.7;
+    zoom = viewW<420 ? 0.55 : (viewW<700 ? 0.7 : (viewW<1100 ? 0.85 : 1.0));
+    initialOffsetSet=true;
+  }
+}
+
+async function initApp(){
+  buildToolbar();
+  resizeCanvas();
+  if(window.ResizeObserver){ new ResizeObserver(()=>resizeCanvas()).observe(gameAreaEl); }
+  window.addEventListener('resize', resizeCanvas);
+
+  const loaded = await autoLoad();
+  if(!loaded) resetGame();
+  else { updateInfoStrip(); }
+
+  requestAnimationFrame(renderLoop);
+  lastTime=performance.now();
+  requestAnimationFrame(gameTick);
+
+  maybeShowTutorial();
+  setInterval(autoSave,20000);
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) autoSave(); });
+}
+window.addEventListener('load', initApp);
+</script>
 </body>
 </html>
