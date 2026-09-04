@@ -30,6 +30,30 @@
   #blocker .hint { margin-top:26px; font-size:0.8em; opacity:.5; animation:pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:.35} 50%{opacity:.8} }
 
+  /* --- welcome / headphone modal --- */
+  #welcome-modal{
+    position:fixed; inset:0; z-index:70; display:none; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.72);
+  }
+  #welcome-modal.visible{ display:flex; }
+  #welcome-box{
+    position:relative; width:min(440px,86vw); background:rgba(14,13,7,0.96);
+    border:2px solid rgba(200,184,106,0.4); border-radius:16px; padding:30px 26px 24px;
+    color:#e7dda0; text-align:center; box-shadow:0 0 40px rgba(0,0,0,0.7);
+  }
+  #welcome-box .icon{ font-size:34px; margin-bottom:10px; }
+  #welcome-box h2{ font-size:16px; letter-spacing:2px; color:#c9b86a; margin-bottom:12px; }
+  #welcome-box p{ font-size:12.5px; line-height:1.7em; opacity:.85; margin-bottom:20px; }
+  #welcome-fullscreen-btn{
+    width:100%; padding:11px; background:linear-gradient(180deg,#8f7a2c,#6b5a1e); border:1px solid rgba(230,210,140,0.5);
+    color:#fff3c8; border-radius:10px; font-family:inherit; font-size:13px; letter-spacing:1px; cursor:pointer;
+  }
+  #welcome-close{
+    position:absolute; top:10px; right:12px; width:28px; height:28px; border-radius:50%;
+    border:1px solid rgba(200,184,106,0.4); background:rgba(255,255,255,0.05); color:#c9b86a;
+    font-size:15px; line-height:26px; cursor:pointer;
+  }
+
   #crosshair {
     position:fixed; top:50%; left:50%; width:6px; height:6px; margin:-3px 0 0 -3px;
     border-radius:50%; background:rgba(255,255,255,0.55); z-index:20; pointer-events:none;
@@ -43,22 +67,27 @@
   }
   #hud-info.hidden { opacity:0; }
 
+  /* --- fullscreen map overlay --- */
   #minimap-wrap {
-    position:fixed; top:18px; right:18px; width:220px; height:220px; z-index:30;
-    opacity:0; transform:scale(0.85); transition:opacity .3s ease, transform .3s ease;
-    pointer-events:none;
+    position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.68); backdrop-filter:blur(2px);
   }
-  #minimap-wrap.visible { opacity:1; transform:scale(1); }
+  #minimap-wrap.visible { display:flex; }
   #minimap-panel {
-    width:100%; height:100%; border-radius:14px; overflow:hidden; position:relative;
-    background:radial-gradient(circle at 50% 50%, rgba(10,25,10,0.75) 0%, rgba(4,10,4,0.92) 100%);
-    border:2px solid rgba(120,180,110,0.35);
-    box-shadow:0 0 22px rgba(0,0,0,0.6), inset 0 0 30px rgba(0,0,0,0.6);
+    position:relative; width:min(86vw,86vh); height:min(86vw,86vh); border-radius:20px; overflow:hidden;
+    background:radial-gradient(circle at 50% 50%, rgba(10,25,10,0.85) 0%, rgba(4,10,4,0.96) 100%);
+    border:2px solid rgba(120,180,110,0.4);
+    box-shadow:0 0 40px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.6);
   }
   #minimap-label {
-    position:absolute; top:6px; left:10px; color:#7fbf7f; font-size:10px; letter-spacing:1px; opacity:.75;
+    position:absolute; top:12px; left:16px; color:#7fbf7f; font-size:12px; letter-spacing:1.5px; opacity:.8;
   }
-  #minimap-canvas { width:100%; height:100%; }
+  #minimap-close{
+    position:absolute; top:8px; right:12px; width:32px; height:32px; border-radius:50%;
+    border:1px solid rgba(150,220,150,0.4); background:rgba(0,0,0,0.35); color:#bfe9bf;
+    font-size:16px; line-height:30px; text-align:center; cursor:pointer; z-index:2;
+  }
+  #minimap-canvas { width:100%; height:100%; display:block; }
 
   /* touch controls */
   #joystick-base{
@@ -69,11 +98,8 @@
     position:absolute; left:50%; top:50%; width:48px; height:48px; margin:-24px 0 0 -24px;
     border-radius:50%; background:rgba(255,255,255,0.32); transition:transform .03s linear;
   }
-  #look-hint{
-    position:fixed; right:0; bottom:0; width:50%; height:60%; z-index:39; display:none;
-  }
 
-  /* --- top-left tools: settings / fullscreen / fps --- */
+  /* --- top-left tools: settings / fullscreen (menu-only) --- */
   #top-tools{
     position:fixed; top:18px; left:18px; z-index:35; display:flex; gap:8px;
   }
@@ -84,20 +110,25 @@
   }
   .tool-btn:active{ background:rgba(80,70,20,0.6); }
 
+  #map-btn{
+    position:fixed; top:18px; right:18px; z-index:36; display:none;
+  }
+
   #fps-counter{
     position:fixed; top:20px; left:66px; z-index:35; color:#7fbf7f; font-size:12px;
     background:rgba(0,0,0,0.35); padding:6px 9px; border-radius:8px; letter-spacing:1px;
-    display:none; pointer-events:none;
+    pointer-events:none;
   }
 
   #settings-panel{
-    position:fixed; top:66px; left:18px; z-index:45; width:270px; max-height:70vh; overflow-y:auto;
-    background:rgba(10,10,6,0.92); border:2px solid rgba(200,184,106,0.35); border-radius:12px;
+    position:fixed; top:66px; left:18px; z-index:45; width:290px; max-height:76vh; overflow-y:auto;
+    background:rgba(10,10,6,0.94); border:2px solid rgba(200,184,106,0.35); border-radius:12px;
     padding:14px; color:#d8cf9a; font-size:12px; display:none; letter-spacing:.5px;
   }
   #settings-panel.open{ display:block; }
-  #settings-panel h3{ font-size:13px; color:#c9b86a; margin-bottom:10px; letter-spacing:1px; }
-  .settings-row{ margin-bottom:12px; }
+  #settings-panel h3{ font-size:13px; color:#c9b86a; margin-bottom:4px; letter-spacing:1px; }
+  #settings-panel .section-label{ font-size:10.5px; color:#9a8d52; margin:12px 0 6px; letter-spacing:1.5px; border-top:1px solid rgba(200,184,106,0.2); padding-top:10px; }
+  .settings-row{ margin-bottom:11px; }
   .settings-row label{ display:flex; justify-content:space-between; margin-bottom:4px; opacity:.9; }
   .settings-row input[type="range"]{ width:100%; }
   .settings-row.checkbox-row{ display:flex; align-items:center; justify-content:space-between; }
@@ -109,23 +140,6 @@
     width:100%; margin-top:6px; padding:7px; background:rgba(120,100,30,0.35); border:1px solid rgba(200,184,106,0.4);
     color:#e8dfae; border-radius:8px; cursor:pointer; font-family:inherit;
   }
-
-  /* --- flashlight battery --- */
-  #flashlight-hud{
-    position:fixed; right:22px; bottom:22px; z-index:35; display:flex; flex-direction:column; align-items:flex-end; gap:6px;
-  }
-  #flashlight-battery-wrap{
-    width:120px; height:10px; border-radius:5px; border:1px solid rgba(200,184,106,0.4); background:rgba(0,0,0,0.4); overflow:hidden;
-  }
-  #flashlight-battery-fill{
-    height:100%; width:100%; background:linear-gradient(90deg,#7fbf7f,#c9b86a); transition:width .15s linear, background .3s;
-  }
-  #flashlight-btn{
-    width:56px; height:56px; border-radius:50%; border:2px solid rgba(200,184,106,0.5);
-    background:rgba(10,10,6,0.6); color:#f5eab0; font-size:22px; display:none; align-items:center; justify-content:center;
-    z-index:41;
-  }
-  #flashlight-btn.on{ background:rgba(180,150,40,0.55); box-shadow:0 0 16px rgba(255,230,150,0.5); }
 </style>
 </head>
 <body>
@@ -142,21 +156,35 @@
   <p class="hint" id="start-hint">[ Нажмите, чтобы войти ]</p>
 </div>
 
+<div id="welcome-modal">
+  <div id="welcome-box">
+    <div class="icon">🎧</div>
+    <h2>РЕКОМЕНДУЕМ ИГРАТЬ В НАУШНИКАХ</h2>
+    <p>Звук здесь — часть игры: гул ламп, капель и шаги в темноте лучше слышны в наушниках.
+       Нажмите кнопку ниже, чтобы открыть игру на весь экран, или закройте это окно крестиком —
+       сделать полноэкранный режим можно будет позже, во время паузы.</p>
+    <button id="welcome-fullscreen-btn">Открыть на весь экран</button>
+    <div id="welcome-close">✕</div>
+  </div>
+</div>
+
 <div id="crosshair"></div>
 
 <div id="hud-info">
-  WASD — движение&nbsp;&nbsp;|&nbsp;&nbsp;SHIFT — бег&nbsp;&nbsp;|&nbsp;&nbsp;МЫШЬ — обзор&nbsp;&nbsp;|&nbsp;&nbsp;M / TAB — карта&nbsp;&nbsp;|&nbsp;&nbsp;F — фонарик
+  WASD — движение&nbsp;&nbsp;|&nbsp;&nbsp;SHIFT — бег&nbsp;&nbsp;|&nbsp;&nbsp;МЫШЬ — обзор&nbsp;&nbsp;|&nbsp;&nbsp;M / TAB — карта&nbsp;&nbsp;|&nbsp;&nbsp;ESC — пауза
 </div>
 
 <div id="minimap-wrap">
   <div id="minimap-panel">
     <div id="minimap-label">УРОВЕНЬ 0 — СКАНЕР</div>
-    <canvas id="minimap-canvas" width="220" height="220"></canvas>
+    <div id="minimap-close">✕</div>
+    <canvas id="minimap-canvas"></canvas>
   </div>
 </div>
 
 <div id="joystick-base"><div id="joystick-knob"></div></div>
-<div id="look-hint"></div>
+
+<div class="tool-btn" id="map-btn">🗺</div>
 
 <div id="top-tools">
   <div class="tool-btn" id="settings-btn" title="Настройки">⚙</div>
@@ -167,18 +195,20 @@
 <div id="settings-panel">
   <h3>НАСТРОЙКИ</h3>
 
-  <div class="settings-row checkbox-row">
-    <label for="opt-fps">Показывать FPS</label>
-    <input type="checkbox" id="opt-fps" checked>
-  </div>
+  <div class="section-label">ГРАФИКА</div>
 
   <div class="settings-row">
-    <label>Качество графики <span id="quality-val">Высокое</span></label>
+    <label>Пресет качества <span id="quality-val">Высокое</span></label>
     <select id="opt-quality">
       <option value="low">Низкое (меньше лагов)</option>
       <option value="medium">Среднее</option>
       <option value="high" selected>Высокое</option>
     </select>
+  </div>
+
+  <div class="settings-row">
+    <label>Масштаб рендера <span id="scale-val">2.0×</span></label>
+    <input type="range" id="opt-scale" min="0.5" max="2" step="0.1" value="2">
   </div>
 
   <div class="settings-row checkbox-row">
@@ -187,9 +217,26 @@
   </div>
 
   <div class="settings-row">
-    <label>Кол-во активных ламп <span id="lights-val">7</span></label>
+    <label>Активные лампы <span id="lights-val">7</span></label>
     <input type="range" id="opt-lights" min="1" max="10" step="1" value="7">
   </div>
+
+  <div class="settings-row">
+    <label>Дальность видимости <span id="fog-val">Средняя</span></label>
+    <input type="range" id="opt-fog" min="1" max="5" step="1" value="3">
+  </div>
+
+  <div class="settings-row">
+    <label>Угол обзора (FOV) <span id="fov-val">70°</span></label>
+    <input type="range" id="opt-fov" min="60" max="95" step="1" value="70">
+  </div>
+
+  <div class="settings-row checkbox-row">
+    <label for="opt-fps">Показывать FPS</label>
+    <input type="checkbox" id="opt-fps" checked>
+  </div>
+
+  <div class="section-label">УПРАВЛЕНИЕ</div>
 
   <div class="settings-row">
     <label>Чувствительность мыши <span id="sens-val">1.0</span></label>
@@ -211,17 +258,19 @@
     <input type="checkbox" id="opt-invert-y">
   </div>
 
+  <div class="section-label">ЗВУК</div>
+
   <div class="settings-row">
-    <label>Громкость звука <span id="vol-val">70%</span></label>
+    <label>Общая громкость <span id="vol-val">70%</span></label>
     <input type="range" id="opt-volume" min="0" max="100" step="1" value="70">
   </div>
 
-  <button id="settings-close">Закрыть</button>
-</div>
+  <div class="settings-row">
+    <label>Громкость шагов <span id="step-vol-val">100%</span></label>
+    <input type="range" id="opt-step-volume" min="0" max="100" step="1" value="100">
+  </div>
 
-<div id="flashlight-hud">
-  <div id="flashlight-battery-wrap"><div id="flashlight-battery-fill"></div></div>
-  <div class="tool-btn" id="flashlight-btn">🔦</div>
+  <button id="settings-close">Закрыть и продолжить</button>
 </div>
 
 <script type="importmap">
@@ -241,7 +290,7 @@ import * as THREE from 'three';
 const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
 /* ======================================================================
-   CONFIG  (tune these if it still lags on weaker hardware)
+   CONFIG
    ====================================================================== */
 const CONFIG = {
   gridSize: 22,
@@ -253,33 +302,31 @@ const CONFIG = {
   walkSpeed: 2.35,
   sprintSpeed: 4.35,
   accel: 8.0,
-  fogDepth: 6,
   fixtureSpacing: 4,
-  lightPoolSize: isTouch ? 6 : 10,     // fixed light count -> no shader recompiles -> no lag
-  activeLights: isTouch ? 5 : 7,       // user-adjustable subset of the pool
+  lightPoolSize: isTouch ? 6 : 10,
+  activeLights: isTouch ? 5 : 7,
   shadowPoolCount: isTouch ? 1 : 2,
   shadowsEnabled: true,
   lightCullRadius: 20,
   braidChance: 0.30,
   pillarChance: 0.05,
   textureSize: isTouch ? 512 : 768,
-  pixelRatioCap: isTouch ? 1.5 : 2,
+  renderScale: isTouch ? 1.5 : 2,
   sensitivity: 1.0,
   touchSensitivity: 1.0,
   invertX: false,
   invertY: false,
   masterVolume: 0.7,
-  flashlightMax: 100,
-  flashlightDrain: 13,      // % per second while on
-  flashlightRecharge: 9,    // % per second while off
-  flashlightMinToTurnOn: 4,
+  stepVolume: 1.0,
+  baseFov: 70,
+  fogDensity: 0.03,
 };
 const N = CONFIG.gridSize;
 const CELL = CONFIG.cellSize;
 const ORIGIN = (N * CELL) / 2;
 
 /* ======================================================================
-   NOISE (unchanged — used only for texture generation, not per-frame)
+   NOISE (texture generation only, not per-frame)
    ====================================================================== */
 class PerlinNoise {
   constructor(seed = 1) {
@@ -424,17 +471,22 @@ function generateSurfaceTextures(opts) {
 }
 
 /* ======================================================================
-   RENDERER / SCENE / CAMERA  (no post-processing — direct clean render)
+   RENDERER / SCENE / CAMERA
    ====================================================================== */
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x9d8f4a, 0.03);
+scene.fog = new THREE.FogExp2(0x9d8f4a, CONFIG.fogDensity);
 
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 90);
+const camera = new THREE.PerspectiveCamera(CONFIG.baseFov, window.innerWidth / window.innerHeight, 0.05, 90);
 camera.rotation.order = 'YXZ';
+// IMPORTANT: the camera must be part of the scene graph, otherwise anything
+// attached to it (flashlight, viewmodel, audio listener) never gets
+// traversed/rendered by the renderer — this was why the flashlight didn't
+// light anything before.
+scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias: !isTouch, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.pixelRatioCap));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -494,7 +546,7 @@ function worldToCell(x, z, N_, ORIGIN_, CELL_) {
 }
 
 /* ======================================================================
-   GLOBAL STATE (filled in by init())
+   GLOBAL STATE
    ====================================================================== */
 let V, H;
 let isOpenRight, isOpenLeft, isOpenDown, isOpenUp;
@@ -506,6 +558,8 @@ let fixturesData = [];
 let lightPool = [];
 let minimapOpen = false;
 let gameActive = false;
+let hasShownWelcome = false;
+let soundZonesStarted = false;
 const keys = {};
 
 function closestPointOnSegment(px, pz, s) {
@@ -540,8 +594,7 @@ function resolveCollisions(pos, radius) {
 }
 
 /* ======================================================================
-   LOOK (unified desktop mouse + touch swipe, both go through applyLook
-   so sensitivity / invert settings affect both identically)
+   LOOK (unified desktop mouse + touch swipe)
    ====================================================================== */
 const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 function applyLook(dx, dy, baseMult) {
@@ -556,8 +609,7 @@ function applyLook(dx, dy, baseMult) {
 }
 
 /* ======================================================================
-   TOUCH INPUT (virtual joystick + swipe look) — only ever wired up on
-   touch devices, so it never appears / interferes on desktop.
+   TOUCH INPUT
    ====================================================================== */
 const touchMove = { x: 0, y: 0 };
 let joystickTouchId = null, joystickCenter = { x: 0, y: 0 };
@@ -567,10 +619,16 @@ function setupTouchControls() {
   const base = document.getElementById('joystick-base');
   const knob = document.getElementById('joystick-knob');
   base.style.display = 'block';
-  document.getElementById('flashlight-btn').style.display = 'flex';
+  document.getElementById('map-btn').style.display = 'flex';
+
+  function isUIPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    return el && el.closest && el.closest('#top-tools,#map-btn,#settings-panel,#minimap-wrap,#welcome-modal,#blocker');
+  }
 
   function onStart(e) {
     for (const t of e.changedTouches) {
+      if (isUIPoint(t.clientX, t.clientY)) continue;
       if (t.clientX < window.innerWidth * 0.5 && joystickTouchId === null) {
         joystickTouchId = t.identifier;
         const rect = base.getBoundingClientRect();
@@ -613,32 +671,56 @@ function setupTouchControls() {
 }
 
 /* ======================================================================
-   DESKTOP POINTER LOCK (manual, so sensitivity/invert settings apply)
+   DESKTOP POINTER LOCK
    ====================================================================== */
 let pointerLocked = false;
 function requestLock() { renderer.domElement.requestPointerLock(); }
+function setTopToolsVisible(v) {
+  document.getElementById('top-tools').style.display = v ? 'flex' : 'none';
+}
 function setupDesktopControls() {
-  const blocker = document.getElementById('blocker');
-  const hudInfo = document.getElementById('hud-info');
-
   document.addEventListener('pointerlockchange', () => {
     pointerLocked = document.pointerLockElement === renderer.domElement;
+    const blocker = document.getElementById('blocker');
+    const hudInfo = document.getElementById('hud-info');
     if (pointerLocked) {
       blocker.style.opacity = '0';
       setTimeout(() => blocker.style.display = 'none', 400);
       setTimeout(() => hudInfo.classList.add('hidden'), 6000);
       document.body.style.cursor = 'none';
+      setTopToolsVisible(false);
+      document.getElementById('settings-panel').classList.remove('open');
+      startSoundZones();
     } else {
       blocker.style.display = 'flex';
       document.body.style.cursor = 'auto';
       requestAnimationFrame(() => blocker.style.opacity = '1');
+      setTopToolsVisible(true);
     }
   });
   document.addEventListener('mousemove', (e) => {
     if (!pointerLocked) return;
     applyLook(e.movementX, e.movementY, 0.0022 * CONFIG.sensitivity);
   });
-  blocker.addEventListener('click', () => { requestLock(); resumeAudio(); });
+  document.getElementById('blocker').addEventListener('click', () => {
+    if (!hasShownWelcome) { showWelcome(() => requestLock()); }
+    else requestLock();
+  });
+}
+
+/* ======================================================================
+   WELCOME MODAL
+   ====================================================================== */
+function showWelcome(onProceed) {
+  hasShownWelcome = true;
+  const modal = document.getElementById('welcome-modal');
+  modal.classList.add('visible');
+  const cleanup = () => modal.classList.remove('visible');
+  document.getElementById('welcome-fullscreen-btn').onclick = () => {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+    cleanup(); onProceed();
+  };
+  document.getElementById('welcome-close').onclick = () => { cleanup(); onProceed(); };
 }
 
 /* ======================================================================
@@ -703,11 +785,11 @@ function updateMovement(dt) {
   camera.position.addScaledVector(rightVec, bobX);
   camera.rotation.z = roll;
 
-  const targetFov = (sprint && isMoving) ? 76 : 70;
+  const targetFov = (sprint && isMoving) ? CONFIG.baseFov + 6 : CONFIG.baseFov;
   camera.fov += (targetFov - camera.fov) * dt * 5;
   camera.updateProjectionMatrix();
 
-  return { bobX, bobY, isMoving };
+  return { speedMag, isMoving };
 }
 
 /* ======================================================================
@@ -719,10 +801,11 @@ function updateFog() {
   revealed.add(startKey);
   const queue = [{ i, j, d: 0 }];
   const seen = new Set([startKey]);
+  const fogDepth = 6;
   while (queue.length) {
     const cur = queue.shift();
     revealed.add(cur.i + ',' + cur.j);
-    if (cur.d >= CONFIG.fogDepth) continue;
+    if (cur.d >= fogDepth) continue;
     const neighbors = [];
     if (isOpenRight(cur.i, cur.j)) neighbors.push([cur.i + 1, cur.j]);
     if (isOpenLeft(cur.i, cur.j)) neighbors.push([cur.i - 1, cur.j]);
@@ -736,18 +819,32 @@ function updateFog() {
 }
 
 /* ======================================================================
-   MINIMAP
+   MAP — now a fullscreen overlay
    ====================================================================== */
 const minimapCanvas = document.getElementById('minimap-canvas');
 const mctx = minimapCanvas.getContext('2d');
-function toggleMinimap() {
-  minimapOpen = !minimapOpen;
-  document.getElementById('minimap-wrap').classList.toggle('visible', minimapOpen);
+function resizeMinimapCanvas() {
+  const panel = document.getElementById('minimap-panel');
+  const rect = panel.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  minimapCanvas.width = Math.floor(rect.width * dpr);
+  minimapCanvas.height = Math.floor(rect.height * dpr);
 }
+function toggleMinimap(forceState) {
+  minimapOpen = typeof forceState === 'boolean' ? forceState : !minimapOpen;
+  document.getElementById('minimap-wrap').classList.toggle('visible', minimapOpen);
+  if (minimapOpen) resizeMinimapCanvas();
+}
+document.getElementById('minimap-close').addEventListener('click', () => toggleMinimap(false));
+document.getElementById('minimap-wrap').addEventListener('click', (e) => {
+  if (e.target.id === 'minimap-wrap') toggleMinimap(false);
+});
+document.getElementById('map-btn').addEventListener('click', () => toggleMinimap());
+
 function drawMinimap() {
   const W = minimapCanvas.width, H2 = minimapCanvas.height;
   mctx.clearRect(0, 0, W, H2);
-  const tile = 10;
+  const tile = W / 20;
   const cx = W / 2, cy = H2 / 2;
   const { i: pi, j: pj } = worldToCell(playerPos.x, playerPos.z, N, ORIGIN, CELL);
   const radiusCells = Math.ceil((W / tile) / 2) + 1;
@@ -766,7 +863,7 @@ function drawMinimap() {
     }
   }
   mctx.strokeStyle = 'rgba(170,255,170,0.85)';
-  mctx.lineWidth = 2;
+  mctx.lineWidth = Math.max(2, W / 260);
   for (let dj = -radiusCells; dj <= radiusCells; dj++) {
     for (let di = -radiusCells; di <= radiusCells; di++) {
       const i = pi + di, j = pj + dj;
@@ -787,17 +884,16 @@ function drawMinimap() {
   mctx.save();
   mctx.translate(cx, cy);
   mctx.rotate(angle);
+  const s = W / 220;
   mctx.fillStyle = '#c8ffb0';
   mctx.beginPath();
-  mctx.moveTo(0, -8); mctx.lineTo(5, 6); mctx.lineTo(0, 3); mctx.lineTo(-5, 6);
+  mctx.moveTo(0, -8 * s); mctx.lineTo(5 * s, 6 * s); mctx.lineTo(0, 3 * s); mctx.lineTo(-5 * s, 6 * s);
   mctx.closePath(); mctx.fill();
   mctx.restore();
 }
 
 /* ======================================================================
-   LIGHT POOL UPDATE — fixed light count => no shader recompiles => no lag.
-   Nearest fixtures (biased toward what the camera is facing) get a real
-   light; everything else stays dark geometry until you look/walk that way.
+   LIGHT POOL UPDATE
    ====================================================================== */
 let lastAssign = 0;
 function updateLights(time) {
@@ -836,76 +932,107 @@ function updateLights(time) {
 }
 
 /* ======================================================================
-   FLASHLIGHT — spotlight + simple viewmodel attached to the camera,
-   with a battery that drains while on and recharges while off, plus an
-   occasional random flicker.
+   FLASHLIGHT — always on, no manual toggle. A bright, warm spotlight with
+   a glowing lens sprite, plus an autonomous state machine that makes it
+   dim / flicker / cut out for a couple of seconds like a dying bulb.
    ====================================================================== */
-let flashlight, flashlightOn = false, flashlightBattery = CONFIG.flashlightMax;
-let flashlightViewmodel;
+let flashlight, flashFill, flashViewmodel, flashLensGlow;
+let flashState = 'on', flashStateTimer = 0;
+
+function scheduleNextFlashEvent() { flashStateTimer = 5 + Math.random() * 11; }
 
 function buildFlashlight() {
-  flashlight = new THREE.SpotLight(0xfff2d0, 0, 11, Math.PI / 7, 0.45, 1.6);
+  // main beam — bright, warm, wide enough to actually light the corridor
+  flashlight = new THREE.SpotLight(0xfff2d0, 20, 16, Math.PI / 6.2, 0.55, 1.4);
   flashlight.castShadow = false;
   camera.add(flashlight);
   camera.add(flashlight.target);
-  flashlight.position.set(0.18, -0.12, 0.05);
-  flashlight.target.position.set(0.18, -0.12, -1);
+  flashlight.position.set(0.2, -0.14, 0.1);
+  flashlight.target.position.set(0.2, -0.14, -1);
 
+  // soft fill so the immediate area right in front of the player isn't pitch black
+  flashFill = new THREE.PointLight(0xfff2d0, 0, 3.5, 2);
+  camera.add(flashFill);
+  flashFill.position.set(0.2, -0.14, 0.4);
+
+  // viewmodel: nicer two-tone flashlight with a glowing lens
   const body = new THREE.Group();
-  const barrelMat = new THREE.MeshStandardMaterial({ color: 0x2a2a28, roughness: 0.5, metalness: 0.6 });
-  const lensMat = new THREE.MeshBasicMaterial({ color: 0xfff3c0 });
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.16, 12), barrelMat);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3a3a36, roughness: 0.35, metalness: 0.75 });
+  const gripMat = new THREE.MeshStandardMaterial({ color: 0x1c1c1a, roughness: 0.7, metalness: 0.3 });
+  const ringMat = new THREE.MeshStandardMaterial({ color: 0xbfae6a, roughness: 0.3, metalness: 0.9 });
+  const lensMat = new THREE.MeshBasicMaterial({ color: 0xfff6d0 });
+
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.03, 0.17, 14), bodyMat);
   barrel.rotation.x = Math.PI / 2;
-  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.01, 12), lensMat);
-  lens.rotation.x = Math.PI / 2;
-  lens.position.z = -0.085;
-  body.add(barrel, lens);
-  body.position.set(0.22, -0.22, -0.35);
-  body.visible = false;
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.026, 0.09, 14), gripMat);
+  grip.rotation.x = Math.PI / 2; grip.position.z = 0.11;
+  const head = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.028, 0.05, 16), bodyMat);
+  head.rotation.x = Math.PI / 2; head.position.z = -0.105;
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.004, 8, 20), ringMat);
+  ring.position.z = -0.128;
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.032, 20), lensMat);
+  lens.position.z = -0.129;
+
+  body.add(barrel, grip, head, ring, lens);
+  body.position.set(0.23, -0.24, -0.36);
+  body.rotation.y = -0.05;
   camera.add(body);
-  flashlightViewmodel = body;
-  flashlightViewmodel.userData.lensMat = lensMat;
+  flashViewmodel = body;
+
+  // additive glow sprite over the lens for a bit of bloom-like punch
+  const glowTex = makeGlowTexture();
+  const glowMat = new THREE.SpriteMaterial({ map: glowTex, color: 0xfff2c0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  flashLensGlow = new THREE.Sprite(glowMat);
+  flashLensGlow.scale.set(0.16, 0.16, 1);
+  flashLensGlow.position.set(0, 0, -0.001);
+  lens.add(flashLensGlow);
+
+  scheduleNextFlashEvent();
 }
 
-function canToggleOn() { return flashlightBattery > CONFIG.flashlightMinToTurnOn; }
-function toggleFlashlight() {
-  if (!flashlightOn && !canToggleOn()) return;
-  flashlightOn = !flashlightOn;
-  document.getElementById('flashlight-btn').classList.toggle('on', flashlightOn);
-  flashlightViewmodel.visible = flashlightOn;
+function makeGlowTexture() {
+  const size = 64;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  g.addColorStop(0, 'rgba(255,245,210,1)');
+  g.addColorStop(0.4, 'rgba(255,235,170,0.55)');
+  g.addColorStop(1, 'rgba(255,235,170,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(c);
 }
 
-function updateFlashlight(dt) {
-  if (flashlightOn) {
-    flashlightBattery -= CONFIG.flashlightDrain * dt;
-    if (flashlightBattery <= 0) {
-      flashlightBattery = 0;
-      flashlightOn = false;
-      document.getElementById('flashlight-btn').classList.remove('on');
-      flashlightViewmodel.visible = false;
+function updateFlashlight(dt, time, bobX, bobY) {
+  flashStateTimer -= dt;
+  if (flashStateTimer <= 0) {
+    if (flashState === 'on') {
+      const roll = Math.random();
+      if (roll < 0.35) { flashState = 'dim'; flashStateTimer = 2 + Math.random() * 3; }
+      else if (roll < 0.75) { flashState = 'flicker'; flashStateTimer = 1 + Math.random() * 2; }
+      else { flashState = 'off'; flashStateTimer = 1.5 + Math.random() * 3.5; }
+    } else {
+      flashState = 'on';
+      scheduleNextFlashEvent();
     }
-  } else {
-    flashlightBattery = Math.min(CONFIG.flashlightMax, flashlightBattery + CONFIG.flashlightRecharge * dt);
   }
 
-  let target = flashlightOn ? 7.5 : 0;
-  if (flashlightOn) {
-    if (flashlightBattery < 22) {
-      if (Math.random() < 0.07) target *= 0.12;
-    }
-    if (Math.random() < 0.0025) target *= 0.08; // "иногда сам мигает" — random faulty flicker
-  }
-  flashlight.intensity += (target - flashlight.intensity) * Math.min(1, dt * 22);
+  let target = 20;
+  if (flashState === 'dim') target = 6;
+  else if (flashState === 'flicker') target = (Math.sin(time * 24) > -0.2 && Math.random() > 0.35) ? 20 : 0.5;
+  else if (flashState === 'off') target = 0;
 
-  const fill = document.getElementById('flashlight-battery-fill');
-  const pct = flashlightBattery / CONFIG.flashlightMax;
-  fill.style.width = (pct * 100) + '%';
-  fill.style.background = pct < 0.22 ? 'linear-gradient(90deg,#a04a2e,#c9863a)' : 'linear-gradient(90deg,#7fbf7f,#c9b86a)';
+  target *= 0.94 + 0.06 * Math.sin(time * 8.5); // subtle constant shimmer, like a real bulb
+  flashlight.intensity += (target - flashlight.intensity) * Math.min(1, dt * 16);
+  flashFill.intensity = flashlight.intensity * 0.05;
+  flashLensGlow.material.opacity = Math.min(1, flashlight.intensity / 20);
+
+  // gentle sway synced with footsteps
+  flashViewmodel.position.x = 0.23 + bobX * 0.6;
+  flashViewmodel.position.y = -0.24 + bobY * 0.5;
 }
 
 /* ======================================================================
-   SOUND ZONES — procedurally generated ambience (no external audio
-   files), positioned in the maze and heard positionally via THREE.Audio.
+   AUDIO: sound zones + footsteps (procedural, no external files)
    ====================================================================== */
 const listener = new THREE.AudioListener();
 camera.add(listener);
@@ -920,7 +1047,7 @@ function makeNoiseBuffer(ctx, duration) {
   let prev = 0;
   for (let i = 0; i < data.length; i++) {
     const white = Math.random() * 2 - 1;
-    prev = (prev + 0.02 * white) / 1.02; // gentle smoothing -> "wind" feel
+    prev = (prev + 0.02 * white) / 1.02;
     data[i] = prev * 3.2;
   }
   return buf;
@@ -948,9 +1075,23 @@ function makeDripBuffer(ctx, duration) {
   }
   return buf;
 }
+function makeFootstepBuffer(ctx) {
+  const dur = 0.16;
+  const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  let prev = 0;
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    const env = Math.exp(-t * 22);
+    const white = Math.random() * 2 - 1;
+    prev = (prev + 0.35 * white) / 1.35; // soft, carpet-muffled thud
+    data[i] = prev * env * 1.8;
+  }
+  return buf;
+}
 
 let soundZones = [];
-function buildSoundZones(pillarFreeCells) {
+function buildSoundZones() {
   const ctx = listener.context;
   const types = ['hum', 'drip', 'wind'];
   const count = 7;
@@ -984,11 +1125,33 @@ function buildSoundZones(pillarFreeCells) {
   }
 }
 function startSoundZones() {
+  if (soundZonesStarted) return;
+  soundZonesStarted = true;
   soundZones.forEach((s, idx) => {
-    if (!s.isPlaying) {
-      setTimeout(() => { try { s.play(); } catch (e) {} }, idx * 60);
-    }
+    if (!s.isPlaying) setTimeout(() => { try { s.play(); } catch (e) {} }, idx * 60);
   });
+}
+
+let footstepBuffers = [], footstepAudios = [], footstepIdx = 0, stepDist = 0;
+function buildFootsteps() {
+  const ctx = listener.context;
+  for (let i = 0; i < 4; i++) footstepBuffers.push(makeFootstepBuffer(ctx));
+  for (let i = 0; i < 3; i++) footstepAudios.push(new THREE.Audio(listener));
+}
+function updateFootsteps(dt, speedMag, isMoving, running) {
+  if (!running || !isMoving) { stepDist = 0; return; }
+  stepDist += speedMag * dt;
+  const strideLen = 1.15;
+  if (stepDist >= strideLen) {
+    stepDist = 0;
+    const a = footstepAudios[footstepIdx % footstepAudios.length]; footstepIdx++;
+    if (a.isPlaying) a.stop();
+    const buf = footstepBuffers[Math.floor(Math.random() * footstepBuffers.length)];
+    a.setBuffer(buf);
+    a.setVolume((0.32 + Math.random() * 0.12) * CONFIG.stepVolume);
+    a.setPlaybackRate(0.92 + Math.random() * 0.2);
+    a.play();
+  }
 }
 
 /* ======================================================================
@@ -999,30 +1162,28 @@ function updateFPS(now) {
   fpsFrames++;
   if (now - fpsLastTime >= 500) {
     const fps = Math.round((fpsFrames * 1000) / (now - fpsLastTime));
+    document.getElementById('fps-counter').style.display = fpsShow ? 'block' : 'none';
     if (fpsShow) document.getElementById('fps-counter').textContent = 'FPS: ' + fps;
     fpsFrames = 0; fpsLastTime = now;
   }
 }
 
 /* ======================================================================
-   SETTINGS PANEL WIRING
+   SETTINGS PANEL
    ====================================================================== */
 function applyQualityPreset(preset) {
   if (preset === 'low') {
-    CONFIG.pixelRatioCap = 1.0;
-    CONFIG.shadowsEnabled = false;
-    CONFIG.activeLights = Math.min(CONFIG.activeLights, 3);
+    CONFIG.renderScale = 1.0; CONFIG.shadowsEnabled = false; CONFIG.activeLights = Math.min(CONFIG.activeLights, 3); CONFIG.fogDensity = 0.045;
   } else if (preset === 'medium') {
-    CONFIG.pixelRatioCap = 1.5;
-    CONFIG.shadowsEnabled = true;
-    CONFIG.activeLights = Math.min(CONFIG.activeLights, 5);
+    CONFIG.renderScale = 1.5; CONFIG.shadowsEnabled = true; CONFIG.activeLights = Math.min(CONFIG.activeLights, 5); CONFIG.fogDensity = 0.03;
   } else {
-    CONFIG.pixelRatioCap = isTouch ? 1.5 : 2;
-    CONFIG.shadowsEnabled = true;
-    CONFIG.activeLights = Math.min(lightPool.length, isTouch ? 5 : 7);
+    CONFIG.renderScale = isTouch ? 1.5 : 2; CONFIG.shadowsEnabled = true; CONFIG.activeLights = Math.min(lightPool.length, isTouch ? 5 : 7); CONFIG.fogDensity = 0.02;
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.pixelRatioCap));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
   renderer.shadowMap.enabled = CONFIG.shadowsEnabled;
+  scene.fog.density = CONFIG.fogDensity;
+  document.getElementById('opt-scale').value = CONFIG.renderScale;
+  document.getElementById('scale-val').textContent = CONFIG.renderScale.toFixed(1) + '×';
   document.getElementById('opt-lights').value = CONFIG.activeLights;
   document.getElementById('lights-val').textContent = CONFIG.activeLights;
   document.getElementById('opt-shadows').checked = CONFIG.shadowsEnabled;
@@ -1033,15 +1194,17 @@ function setupSettingsUI() {
   document.getElementById('settings-btn').addEventListener('click', () => panel.classList.toggle('open'));
   document.getElementById('settings-close').addEventListener('click', () => panel.classList.remove('open'));
 
-  document.getElementById('opt-fps').addEventListener('change', (e) => {
-    fpsShow = e.target.checked;
-    document.getElementById('fps-counter').style.display = fpsShow ? 'block' : 'none';
-  });
-  document.getElementById('fps-counter').style.display = 'block';
+  document.getElementById('opt-fps').addEventListener('change', (e) => { fpsShow = e.target.checked; });
 
   document.getElementById('opt-quality').addEventListener('change', (e) => {
     applyQualityPreset(e.target.value);
     document.getElementById('quality-val').textContent = e.target.options[e.target.selectedIndex].text;
+  });
+
+  document.getElementById('opt-scale').addEventListener('input', (e) => {
+    CONFIG.renderScale = parseFloat(e.target.value);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
+    document.getElementById('scale-val').textContent = CONFIG.renderScale.toFixed(1) + '×';
   });
 
   document.getElementById('opt-shadows').addEventListener('change', (e) => {
@@ -1052,6 +1215,20 @@ function setupSettingsUI() {
   document.getElementById('opt-lights').addEventListener('input', (e) => {
     CONFIG.activeLights = parseInt(e.target.value, 10);
     document.getElementById('lights-val').textContent = CONFIG.activeLights;
+  });
+
+  const fogLabels = { 1: 'Очень близкая', 2: 'Близкая', 3: 'Средняя', 4: 'Дальняя', 5: 'Очень дальняя' };
+  const fogValues = { 1: 0.06, 2: 0.045, 3: 0.03, 4: 0.02, 5: 0.012 };
+  document.getElementById('opt-fog').addEventListener('input', (e) => {
+    const v = parseInt(e.target.value, 10);
+    CONFIG.fogDensity = fogValues[v];
+    scene.fog.density = CONFIG.fogDensity;
+    document.getElementById('fog-val').textContent = fogLabels[v];
+  });
+
+  document.getElementById('opt-fov').addEventListener('input', (e) => {
+    CONFIG.baseFov = parseInt(e.target.value, 10);
+    document.getElementById('fov-val').textContent = CONFIG.baseFov + '°';
   });
 
   document.getElementById('opt-sens').addEventListener('input', (e) => {
@@ -1070,17 +1247,19 @@ function setupSettingsUI() {
     listener.setMasterVolume(CONFIG.masterVolume);
     document.getElementById('vol-val').textContent = e.target.value + '%';
   });
+  document.getElementById('opt-step-volume').addEventListener('input', (e) => {
+    CONFIG.stepVolume = parseInt(e.target.value, 10) / 100;
+    document.getElementById('step-vol-val').textContent = e.target.value + '%';
+  });
 
   document.getElementById('fullscreen-btn').addEventListener('click', () => {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
     else document.exitFullscreen();
   });
-
-  document.getElementById('flashlight-btn').addEventListener('click', () => { toggleFlashlight(); resumeAudio(); });
 }
 
 /* ======================================================================
-   INIT — builds the whole level. Runs after the loading screen paints.
+   INIT
    ====================================================================== */
 function init() {
   const maze = generateMaze(N);
@@ -1119,7 +1298,6 @@ function init() {
     }
   }
 
-  /* --- textures & materials --- */
   const wallpaperTex = generateSurfaceTextures({
     seed: 3, baseColor: [188, 168, 84], noiseScale: 5, octaves: 4,
     stainStrength: 0.35, stainScale: 0.4, bumpStrength: 1.6, roughBase: 165,
@@ -1211,7 +1389,6 @@ function init() {
     scene.add(pillarInstanced);
   }
 
-  /* --- fixtures (static instanced meshes) + fixed light pool --- */
   scene.add(new THREE.HemisphereLight(0xa89a58, 0x24200f, 0.55));
 
   const fixturePositions = [];
@@ -1253,11 +1430,10 @@ function init() {
     lightPool.push({ light, assigned: -1 });
   }
 
-  /* --- flashlight + sound zones --- */
   buildFlashlight();
   buildSoundZones();
+  buildFootsteps();
 
-  /* --- player --- */
   const startCell = { i: Math.floor(N / 2), j: Math.floor(N / 2) };
   const startPos = cellCenter(startCell.i, startCell.j);
   playerPos = new THREE.Vector3(startPos.x, CONFIG.eyeHeight, startPos.z);
@@ -1269,38 +1445,37 @@ function init() {
 
   if (isTouch) {
     document.getElementById('start-hint').textContent = '[ Нажмите, чтобы войти ]';
+    setTopToolsVisible(true);
     blocker.addEventListener('click', () => {
-      blocker.style.opacity = '0';
-      setTimeout(() => blocker.style.display = 'none', 400);
-      setTimeout(() => document.getElementById('hud-info').classList.add('hidden'), 5000);
-      gameActive = true;
-      lookEuler.setFromQuaternion(camera.quaternion);
-      resumeAudio();
-      startSoundZones();
+      const proceed = () => {
+        blocker.style.opacity = '0';
+        setTimeout(() => blocker.style.display = 'none', 400);
+        setTimeout(() => document.getElementById('hud-info').classList.add('hidden'), 5000);
+        gameActive = true;
+        lookEuler.setFromQuaternion(camera.quaternion);
+        resumeAudio();
+        startSoundZones();
+      };
+      if (!hasShownWelcome) showWelcome(proceed); else proceed();
     }, { once: true });
     setupTouchControls();
   } else {
     setupDesktopControls();
-    // start ambience the first time the pointer actually locks
-    document.addEventListener('pointerlockchange', () => { if (pointerLocked) startSoundZones(); }, { once: false });
   }
 
   window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
     if (e.code === 'Tab' || e.code === 'KeyM') { e.preventDefault(); toggleMinimap(); }
-    if (e.code === 'KeyF') { toggleFlashlight(); }
   });
   window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
   setupSettingsUI();
 
-  /* --- reveal blocker, hide loading screen --- */
   document.getElementById('loading-screen').style.display = 'none';
   blocker.style.display = 'flex';
   requestAnimationFrame(() => blocker.style.opacity = '1');
   document.body.style.cursor = 'auto';
 
-  /* --- main loop --- */
   const clock = new THREE.Clock();
   let fogTimer = 0;
   function animate(nowMs) {
@@ -1309,13 +1484,18 @@ function init() {
     const time = clock.elapsedTime;
 
     const running = isTouch ? gameActive : pointerLocked;
+    let speedMag = 0, isMoving = false, bobX = 0, bobY = 0;
     if (running) {
-      updateMovement(dt);
+      const mv = updateMovement(dt);
+      speedMag = mv.speedMag; isMoving = mv.isMoving;
+      bobX = Math.sin(walkCycle) * 0.028;
+      bobY = Math.sin(walkCycle * 2.0) * 0.045;
       fogTimer += dt;
       if (fogTimer > 0.15) { fogTimer = 0; updateFog(); }
     }
     updateLights(time);
-    updateFlashlight(dt);
+    updateFlashlight(dt, time, bobX, bobY);
+    updateFootsteps(dt, speedMag, isMoving, running);
     if (minimapOpen) drawMinimap();
     updateFPS(nowMs || performance.now());
     renderer.render(scene, camera);
@@ -1323,7 +1503,6 @@ function init() {
   animate();
 }
 
-/* Let the loading screen paint before running the (synchronous) generation */
 window.addEventListener('load', () => {
   requestAnimationFrame(() => setTimeout(init, 30));
 });
