@@ -140,6 +140,25 @@
     width:100%; margin-top:6px; padding:7px; background:rgba(120,100,30,0.35); border:1px solid rgba(200,184,106,0.4);
     color:#e8dfae; border-radius:8px; cursor:pointer; font-family:inherit;
   }
+
+  /* --- level transition / door --- */
+  #level-transition{
+    position:fixed; inset:0; z-index:80; background:#000; opacity:0; pointer-events:none;
+    transition:opacity 1.15s ease;
+  }
+  #level-transition.active{ opacity:1; }
+  #level-transition .level-caption{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#7a1414;
+    font-size:22px; letter-spacing:6px; opacity:0; transition:opacity 1s ease .6s; text-align:center;
+  }
+  #level-transition.active .level-caption{ opacity:1; }
+
+  #door-prompt{
+    position:fixed; left:50%; bottom:130px; transform:translateX(-50%); z-index:25; color:#d9c9a3;
+    font-size:12px; letter-spacing:1.5px; opacity:0; transition:opacity .35s ease; text-shadow:0 0 6px #000;
+    pointer-events:none; text-align:center;
+  }
+  #door-prompt.visible{ opacity:.9; }
 </style>
 </head>
 <body>
@@ -174,6 +193,9 @@
   WASD — движение&nbsp;&nbsp;|&nbsp;&nbsp;SHIFT — бег&nbsp;&nbsp;|&nbsp;&nbsp;МЫШЬ — обзор&nbsp;&nbsp;|&nbsp;&nbsp;M / TAB — карта&nbsp;&nbsp;|&nbsp;&nbsp;ESC — пауза
 </div>
 
+<div id="level-transition"><div class="level-caption" id="level-caption"></div></div>
+<div id="door-prompt">ТАМ ЧТО-ТО ЕСТЬ...</div>
+
 <div id="minimap-wrap">
   <div id="minimap-panel">
     <div id="minimap-label">УРОВЕНЬ 0 — СКАНЕР</div>
@@ -184,7 +206,7 @@
 
 <div id="joystick-base"><div id="joystick-knob"></div></div>
 
-<div class="tool-btn" id="map-btn">🗺</div>
+<div class="tool-btn" id="map-btn">🧭</div>
 
 <div id="top-tools">
   <div class="tool-btn" id="settings-btn" title="Настройки">⚙</div>
@@ -207,8 +229,8 @@
   </div>
 
   <div class="settings-row">
-    <label>Масштаб рендера <span id="scale-val">2.0×</span></label>
-    <input type="range" id="opt-scale" min="0.5" max="2" step="0.1" value="2">
+    <label>Масштаб рендера <span id="scale-val">1.3×</span></label>
+    <input type="range" id="opt-scale" min="0.5" max="2" step="0.1" value="1.3">
   </div>
 
   <div class="settings-row checkbox-row">
@@ -311,7 +333,7 @@ const CONFIG = {
   braidChance: 0.30,
   pillarChance: 0.05,
   textureSize: isTouch ? 512 : 768,
-  renderScale: isTouch ? 1.5 : 2,
+  renderScale: isTouch ? 1.5 : 1.3,
   sensitivity: 1.0,
   touchSensitivity: 1.0,
   invertX: false,
@@ -471,6 +493,202 @@ function generateSurfaceTextures(opts) {
 }
 
 /* ======================================================================
+   WALLPAPER — matches the classic damask/ogee "backrooms" pattern:
+   pale yellow-green ground with a darker olive vertical chain motif,
+   plus the same grime/stain noise as the other surfaces so it still
+   reads as a worn, real material rather than a flat print.
+   darken (0..1) is used by deeper levels to make the pattern rot/fade.
+   ====================================================================== */
+function drawOgeeMotif(ctx, cx, cy, w, h, fill) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.moveTo(0, -h * 0.5);
+  ctx.bezierCurveTo(w * 0.52, -h * 0.40, w * 0.40, -h * 0.08, w * 0.15, 0);
+  ctx.bezierCurveTo(w * 0.40, h * 0.08, w * 0.52, h * 0.40, 0, h * 0.5);
+  ctx.bezierCurveTo(-w * 0.52, h * 0.40, -w * 0.40, h * 0.08, -w * 0.15, 0);
+  ctx.bezierCurveTo(-w * 0.40, -h * 0.08, -w * 0.52, -h * 0.40, 0, -h * 0.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(0, 0, w * 0.09, h * 0.11, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fill();
+  ctx.restore();
+}
+function generateWallpaperTexture(opts) {
+  const { size = CONFIG.textureSize, seed = 3, darken = 0 } = opts;
+  const noise = new PerlinNoise(seed);
+  const stainNoise = new PerlinNoise(seed + 41);
+
+  const mix = (a, b, t) => a + (b - a) * t;
+  const groundColor = [
+    mix(203, 60, darken), mix(198, 58, darken), mix(140, 52, darken),
+  ];
+  const motifColor = [
+    mix(120, 40, darken), mix(128, 30, darken), mix(58, 26, darken),
+  ];
+
+  const diffCanvas = document.createElement('canvas'); diffCanvas.width = diffCanvas.height = size;
+  const dctx = diffCanvas.getContext('2d');
+
+  // base ground fill with soft vertical grain
+  const img = dctx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const idx = y * size + x;
+      const n = noise.fbm(mirrorWrap(x / size * 5, 5), mirrorWrap(y / size * 5, 5), 4, 2.0, 0.55);
+      const shade = 0.82 + n * 0.24;
+      const p = idx * 4;
+      img.data[p] = Math.min(255, groundColor[0] * shade);
+      img.data[p + 1] = Math.min(255, groundColor[1] * shade);
+      img.data[p + 2] = Math.min(255, groundColor[2] * shade);
+      img.data[p + 3] = 255;
+    }
+  }
+  dctx.putImageData(img, 0, 0);
+
+  // repeating ogee/damask columns, staggered like the reference photo
+  const cols = 6;
+  const colW = size / cols;
+  const unitH = colW * 1.05;
+  const rows = Math.ceil(size / unitH) + 2;
+  for (let c = 0; c < cols; c++) {
+    const cx = colW * (c + 0.5);
+    const offset = (c % 2) * unitH * 0.5;
+    const shade = 0.9 + (c % 3) * 0.05;
+    const col = `rgb(${Math.min(255, motifColor[0]*shade)|0},${Math.min(255, motifColor[1]*shade)|0},${Math.min(255, motifColor[2]*shade)|0})`;
+    for (let r = -1; r < rows; r++) {
+      const cy = r * unitH + unitH / 2 - offset;
+      drawOgeeMotif(dctx, cx, cy, colW * 0.66, unitH * 0.98, col);
+    }
+    // thin connecting spine so the motifs read as one continuous chain
+    dctx.strokeStyle = col; dctx.lineWidth = Math.max(1, size / 340);
+    dctx.beginPath(); dctx.moveTo(cx, 0); dctx.lineTo(cx, size); dctx.stroke();
+  }
+
+  // grime / water stains on top, same approach as the other surfaces
+  const dimg = dctx.getImageData(0, 0, size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const u = x / size, v = y / size;
+      const sx = mirrorWrap(u * 2.1, 2.1), sy = mirrorWrap(v * 2.1, 2.1);
+      let stain = stainNoise.fbm(sx + 30, sy + 30, 3, 2.0, 0.5);
+      stain = Math.pow(Math.max(0, stain + 0.45), 3) * (0.32 + darken * 0.35);
+      const p = (y * size + x) * 4;
+      dimg.data[p] = dimg.data[p] * (1 - stain * 0.6);
+      dimg.data[p + 1] = dimg.data[p + 1] * (1 - stain * 0.6);
+      dimg.data[p + 2] = dimg.data[p + 2] * (1 - stain * 0.55);
+    }
+  }
+  dctx.putImageData(dimg, 0, 0);
+
+  // roughness + normal derived from the same luminance data
+  const size2 = size;
+  const heights = new Float32Array(size2 * size2);
+  const lum = dctx.getImageData(0, 0, size2, size2);
+  for (let i = 0; i < size2 * size2; i++) {
+    const p = i * 4;
+    heights[i] = (lum.data[p] * 0.299 + lum.data[p+1] * 0.587 + lum.data[p+2] * 0.114) / 255;
+  }
+  const roughCanvas = document.createElement('canvas'); roughCanvas.width = roughCanvas.height = size2;
+  const rctx = roughCanvas.getContext('2d');
+  const rimg = rctx.createImageData(size2, size2);
+  const normCanvas = document.createElement('canvas'); normCanvas.width = normCanvas.height = size2;
+  const nctx = normCanvas.getContext('2d');
+  const nimg = nctx.createImageData(size2, size2);
+  for (let y = 0; y < size2; y++) {
+    for (let x = 0; x < size2; x++) {
+      const idx = y * size2 + x;
+      const roughV = Math.min(255, Math.max(0, 150 + (0.5 - heights[idx]) * 160));
+      const p = idx * 4;
+      rimg.data[p] = roughV; rimg.data[p+1] = roughV; rimg.data[p+2] = roughV; rimg.data[p+3] = 255;
+
+      const x0 = (x - 1 + size2) % size2, x1 = (x + 1) % size2;
+      const y0 = (y - 1 + size2) % size2, y1 = (y + 1) % size2;
+      const hl = heights[y * size2 + x0], hr = heights[y * size2 + x1];
+      const hu = heights[y0 * size2 + x], hd = heights[y1 * size2 + x];
+      let nxv = (hl - hr) * 1.8, nyv = (hu - hd) * 1.8, nzv = 1.0;
+      const len = Math.sqrt(nxv*nxv + nyv*nyv + nzv*nzv);
+      nxv /= len; nyv /= len; nzv /= len;
+      nimg.data[p] = (nxv * 0.5 + 0.5) * 255;
+      nimg.data[p+1] = (nyv * 0.5 + 0.5) * 255;
+      nimg.data[p+2] = (nzv * 0.5 + 0.5) * 255;
+      nimg.data[p+3] = 255;
+    }
+  }
+  rctx.putImageData(rimg, 0, 0);
+  nctx.putImageData(nimg, 0, 0);
+
+  const map = new THREE.CanvasTexture(diffCanvas);
+  const roughnessMap = new THREE.CanvasTexture(roughCanvas);
+  const normalMap = new THREE.CanvasTexture(normCanvas);
+  map.colorSpace = THREE.SRGBColorSpace;
+  [map, roughnessMap, normalMap].forEach(t => {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 4;
+    t.needsUpdate = true;
+  });
+  return { map, roughnessMap, normalMap };
+}
+
+/* ======================================================================
+   BLOOD DECALS — small canvas splatter sprites scattered through the
+   level; more of them (and darker) the deeper you go.
+   ====================================================================== */
+function makeBloodTexture(seed) {
+  const size = 256;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  let s = seed * 9301 + 49297;
+  const rand = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  const cx = size / 2, cy = size / 2;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  const blobs = 5 + Math.floor(rand() * 5);
+  for (let b = 0; b < blobs; b++) {
+    const ang = rand() * Math.PI * 2;
+    const dist = rand() * size * 0.32;
+    const bx = Math.cos(ang) * dist, by = Math.sin(ang) * dist;
+    const r = size * (0.06 + rand() * 0.16);
+    const g = ctx.createRadialGradient(bx, by, 0, bx, by, r);
+    g.addColorStop(0, 'rgba(74,4,4,0.95)');
+    g.addColorStop(0.6, 'rgba(58,2,2,0.75)');
+    g.addColorStop(1, 'rgba(40,1,1,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    for (let k = 0; k < 10; k++) {
+      const a2 = (k / 10) * Math.PI * 2;
+      const rr = r * (0.6 + rand() * 0.6);
+      const px = bx + Math.cos(a2) * rr, py = by + Math.sin(a2) * rr;
+      if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+  // thin drips
+  for (let d = 0; d < 6; d++) {
+    const ang = rand() * Math.PI * 2;
+    const startR = rand() * size * 0.2;
+    const len = size * (0.1 + rand() * 0.22);
+    const x0 = Math.cos(ang) * startR, y0 = Math.sin(ang) * startR;
+    const x1 = x0 + Math.cos(ang) * len, y1 = y0 + Math.sin(ang) * len;
+    ctx.strokeStyle = 'rgba(50,2,2,0.7)';
+    ctx.lineWidth = 1.5 + rand() * 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  }
+  ctx.restore();
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/* ======================================================================
    RENDERER / SCENE / CAMERA
    ====================================================================== */
 const scene = new THREE.Scene();
@@ -561,6 +779,12 @@ let gameActive = false;
 let hasShownWelcome = false;
 let soundZonesStarted = false;
 const keys = {};
+let currentLevel = 0;
+let levelGroup = null;
+let doorState = null; // { i, j, x, z, mesh }
+let transitioning = false;
+let hemiLight = null;
+function mix(a, b, t) { return a + (b - a) * t; }
 
 function closestPointOnSegment(px, pz, s) {
   const dx = s.x2 - s.x1, dz = s.z2 - s.z1;
@@ -876,6 +1100,15 @@ function drawMinimap() {
       if (H[i][j] === true) { mctx.beginPath(); mctx.moveTo(sx, sy); mctx.lineTo(sx + tile, sy); mctx.stroke(); }
     }
   }
+  if (doorState && revealed.has(doorState.i + ',' + doorState.j)) {
+    const di = doorState.i - pi, dj = doorState.j - pj;
+    const sx = cx + di * tile, sy = cy + dj * tile;
+    const pulse = 0.55 + 0.45 * Math.sin(performance.now() * 0.005);
+    mctx.fillStyle = `rgba(90,230,110,${0.55 + pulse * 0.35})`;
+    mctx.beginPath(); mctx.arc(sx, sy, tile * 0.32, 0, Math.PI * 2); mctx.fill();
+    mctx.strokeStyle = 'rgba(200,255,200,0.9)'; mctx.lineWidth = Math.max(1.5, W / 320);
+    mctx.beginPath(); mctx.arc(sx, sy, tile * 0.32, 0, Math.PI * 2); mctx.stroke();
+  }
   mctx.restore();
 
   const dir = new THREE.Vector3();
@@ -938,6 +1171,7 @@ function updateLights(time) {
    ====================================================================== */
 let flashlight, flashFill, flashViewmodel, flashLensGlow;
 let flashState = 'on', flashStateTimer = 0;
+let flashDarkBias = 0; // 0..0.5, raised per level so the flashlight fails more the deeper you go
 
 function scheduleNextFlashEvent() { flashStateTimer = 5 + Math.random() * 11; }
 
@@ -1007,9 +1241,10 @@ function updateFlashlight(dt, time, bobX, bobY) {
   if (flashStateTimer <= 0) {
     if (flashState === 'on') {
       const roll = Math.random();
-      if (roll < 0.35) { flashState = 'dim'; flashStateTimer = 2 + Math.random() * 3; }
-      else if (roll < 0.75) { flashState = 'flicker'; flashStateTimer = 1 + Math.random() * 2; }
-      else { flashState = 'off'; flashStateTimer = 1.5 + Math.random() * 3.5; }
+      const dimCut = 0.35 - flashDarkBias * 0.2, flickerCut = 0.75 - flashDarkBias * 0.35;
+      if (roll < dimCut) { flashState = 'dim'; flashStateTimer = 2 + Math.random() * 3; }
+      else if (roll < flickerCut) { flashState = 'flicker'; flashStateTimer = 1 + Math.random() * 2; }
+      else { flashState = 'off'; flashStateTimer = Math.max(0.6, 1.5 - flashDarkBias) + Math.random() * 3.5; }
     } else {
       flashState = 'on';
       scheduleNextFlashEvent();
@@ -1037,9 +1272,41 @@ function updateFlashlight(dt, time, bobX, bobY) {
 const listener = new THREE.AudioListener();
 camera.add(listener);
 listener.setMasterVolume(CONFIG.masterVolume);
+
+let audioUnlocked = false;
 function resumeAudio() {
-  if (listener.context.state === 'suspended') listener.context.resume();
+  const ctx = listener.context;
+  const doUnlock = () => {
+    // iOS Safari needs a real (even if silent) buffer played from inside
+    // the gesture handler to fully wake the audio hardware — resume()
+    // alone is often not enough there.
+    try {
+      const src = ctx.createBufferSource();
+      src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch (e) {}
+    audioUnlocked = true;
+  };
+  if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+    ctx.resume().then(doUnlock).catch(() => {});
+  } else if (!audioUnlocked) {
+    doUnlock();
+  }
 }
+// iOS/Safari (and some Android browsers) silently suspend the AudioContext
+// again whenever the tab loses/regains focus or the app is backgrounded —
+// without this it comes back with no sound after switching apps.
+['visibilitychange', 'pageshow', 'focus'].forEach(ev =>
+  window.addEventListener(ev, () => { if (gameActive || pointerLocked) resumeAudio(); })
+);
+// Grab the very first tap/click anywhere as an extra unlock attempt, since
+// on iOS the resume() call must happen synchronously inside a genuine user
+// gesture — chaining it through the welcome-modal button click still counts,
+// but this catches any edge case where that chain gets interrupted.
+window.addEventListener('pointerdown', function firstGesture() {
+  resumeAudio();
+}, { capture: true });
 
 function makeNoiseBuffer(ctx, duration) {
   const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
@@ -1174,6 +1441,7 @@ function updateFootsteps(dt, speedMag, isMoving, running) {
    FPS COUNTER
    ====================================================================== */
 let fpsLastTime = performance.now(), fpsFrames = 0, fpsShow = true;
+let autoQualityEnabled = true, lowFpsStreak = 0, goodFpsStreak = 0;
 function updateFPS(now) {
   fpsFrames++;
   if (now - fpsLastTime >= 500) {
@@ -1181,6 +1449,52 @@ function updateFPS(now) {
     document.getElementById('fps-counter').style.display = fpsShow ? 'block' : 'none';
     if (fpsShow) document.getElementById('fps-counter').textContent = 'FPS: ' + fps;
     fpsFrames = 0; fpsLastTime = now;
+    autoTuneQuality(fps);
+  }
+}
+// Desktop GPUs vary wildly, so instead of a single fixed render scale we
+// step it down automatically when the frame rate is genuinely struggling,
+// and cautiously step it back up if things recover. Touch devices are left
+// alone since they already ran fine.
+function autoTuneQuality(fps) {
+  if (isTouch || !autoQualityEnabled) return;
+  if (fps < 40) {
+    lowFpsStreak++; goodFpsStreak = 0;
+    if (lowFpsStreak >= 3) {
+      lowFpsStreak = 0;
+      let changed = false;
+      if (CONFIG.renderScale > 1.0) {
+        CONFIG.renderScale = Math.max(1.0, +(CONFIG.renderScale - 0.15).toFixed(2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
+        changed = true;
+      } else if (CONFIG.shadowsEnabled) {
+        CONFIG.shadowsEnabled = false;
+        renderer.shadowMap.enabled = false;
+        changed = true;
+      } else if (CONFIG.activeLights > 3) {
+        CONFIG.activeLights = Math.max(3, CONFIG.activeLights - 1);
+        changed = true;
+      }
+      if (changed) {
+        const scaleEl = document.getElementById('opt-scale'), scaleVal = document.getElementById('scale-val');
+        const shadowsEl = document.getElementById('opt-shadows');
+        const lightsEl = document.getElementById('opt-lights'), lightsVal = document.getElementById('lights-val');
+        if (scaleEl) { scaleEl.value = CONFIG.renderScale; scaleVal.textContent = CONFIG.renderScale.toFixed(2) + '×'; }
+        if (shadowsEl) shadowsEl.checked = CONFIG.shadowsEnabled;
+        if (lightsEl) { lightsEl.value = CONFIG.activeLights; lightsVal.textContent = CONFIG.activeLights; }
+      }
+    }
+  } else if (fps > 58) {
+    goodFpsStreak++; lowFpsStreak = 0;
+    if (goodFpsStreak >= 12 && CONFIG.renderScale < 1.3) {
+      goodFpsStreak = 0;
+      CONFIG.renderScale = Math.min(1.3, +(CONFIG.renderScale + 0.1).toFixed(2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
+      const scaleEl = document.getElementById('opt-scale'), scaleVal = document.getElementById('scale-val');
+      if (scaleEl) { scaleEl.value = CONFIG.renderScale; scaleVal.textContent = CONFIG.renderScale.toFixed(2) + '×'; }
+    }
+  } else {
+    lowFpsStreak = 0; goodFpsStreak = 0;
   }
 }
 
@@ -1193,7 +1507,7 @@ function applyQualityPreset(preset) {
   } else if (preset === 'medium') {
     CONFIG.renderScale = 1.5; CONFIG.shadowsEnabled = true; CONFIG.activeLights = Math.min(CONFIG.activeLights, 5); CONFIG.fogDensity = 0.03;
   } else {
-    CONFIG.renderScale = isTouch ? 1.5 : 2; CONFIG.shadowsEnabled = true; CONFIG.activeLights = Math.min(lightPool.length, isTouch ? 5 : 7); CONFIG.fogDensity = 0.02;
+    CONFIG.renderScale = isTouch ? 1.5 : 1.3; CONFIG.shadowsEnabled = true; CONFIG.activeLights = Math.min(lightPool.length, isTouch ? 5 : 7); CONFIG.fogDensity = 0.02;
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
   renderer.shadowMap.enabled = CONFIG.shadowsEnabled;
@@ -1218,6 +1532,7 @@ function setupSettingsUI() {
   });
 
   document.getElementById('opt-scale').addEventListener('input', (e) => {
+    autoQualityEnabled = false;
     CONFIG.renderScale = parseFloat(e.target.value);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
     document.getElementById('scale-val').textContent = CONFIG.renderScale.toFixed(1) + '×';
@@ -1277,7 +1592,99 @@ function setupSettingsUI() {
 /* ======================================================================
    INIT
    ====================================================================== */
-function init() {
+/* ======================================================================
+   LEVEL THEME — each level down gets darker, sicklier, and foggier.
+   ====================================================================== */
+function levelTheme(level) {
+  const t = Math.min(level, 5) / 5;
+  const lerpColor = (hexA, hexB) => new THREE.Color(hexA).lerp(new THREE.Color(hexB), t);
+  return {
+    level, darken: t,
+    fogColor: lerpColor(0x9d8f4a, 0x140708),
+    fogDensity: 0.02 * (1 + t * 2.2),
+    hemiSky: lerpColor(0xa89a58, 0x3a1414),
+    hemiGround: lerpColor(0x24200f, 0x050202),
+    hemiIntensity: 0.55 * (1 - t * 0.65),
+    fixtureIntensity: 13 * (1 - t * 0.55),
+    flashOffBias: t * 0.5,
+    bloodFloorCount: 2 + level * 4,
+    bloodWallCount: level >= 1 ? 1 + level * 2 : 0,
+  };
+}
+
+/* ======================================================================
+   THE DOOR — a lone door standing at the far end of the maze. Walking
+   into it drops you to the next, darker level. It's only marked on the
+   minimap once the fog-of-war has actually revealed its cell.
+   ====================================================================== */
+function buildDoorMesh() {
+  const group = new THREE.Group();
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x18110c, roughness: 0.85, metalness: 0.05 });
+  const doorMat = new THREE.MeshStandardMaterial({ color: 0x3a2015, roughness: 0.65, metalness: 0.1 });
+  const knobMat = new THREE.MeshStandardMaterial({ color: 0x8a7a3a, roughness: 0.3, metalness: 0.85 });
+
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.34, 2.5, 0.16), frameMat);
+  frame.position.y = 1.25;
+  const inner = new THREE.Mesh(new THREE.BoxGeometry(1.02, 2.24, 0.18), doorMat);
+  inner.position.set(0, 1.15, 0);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), knobMat);
+  knob.position.set(0.36, 1.05, 0.12);
+  frame.castShadow = inner.castShadow = true;
+  group.add(frame, inner, knob);
+
+  const glow = new THREE.PointLight(0x5fe58a, 1.4, 3.2, 2.0);
+  glow.position.set(0, 1.2, 0.35);
+  group.add(glow);
+  group.userData.glow = glow;
+  return group;
+}
+
+function findFarCell(startI, startJ) {
+  const dist = Array.from({ length: N }, () => new Array(N).fill(-1));
+  dist[startI][startJ] = 0;
+  const q = [[startI, startJ]];
+  let qi = 0, best = [startI, startJ], bd = 0;
+  while (qi < q.length) {
+    const [i, j] = q[qi++];
+    const d = dist[i][j];
+    if (d > bd) { bd = d; best = [i, j]; }
+    const neighbors = [];
+    if (isOpenRight(i, j)) neighbors.push([i + 1, j]);
+    if (isOpenLeft(i, j)) neighbors.push([i - 1, j]);
+    if (isOpenDown(i, j)) neighbors.push([i, j + 1]);
+    if (isOpenUp(i, j)) neighbors.push([i, j - 1]);
+    for (const [ni, nj] of neighbors) {
+      if (dist[ni][nj] === -1) { dist[ni][nj] = d + 1; q.push([ni, nj]); }
+    }
+  }
+  return { i: best[0], j: best[1] };
+}
+
+/* ======================================================================
+   BUILD LEVEL — (re)generates the maze, materials, lighting and props.
+   Called once for level 0 by init(), and again on every door transition.
+   ====================================================================== */
+function disposeLevelGroup() {
+  if (!levelGroup) return;
+  levelGroup.traverse((obj) => {
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) {
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      mats.forEach((m) => {
+        ['map', 'normalMap', 'roughnessMap', 'alphaMap'].forEach((k) => { if (m[k]) m[k].dispose(); });
+        m.dispose();
+      });
+    }
+  });
+  scene.remove(levelGroup);
+  levelGroup = null;
+}
+
+function buildLevel(level) {
+  disposeLevelGroup();
+  levelGroup = new THREE.Group();
+  const theme = levelTheme(level);
+
   const maze = generateMaze(N);
   V = maze.V; H = maze.H;
   isOpenRight = (i, j) => i + 1 < N && V[i + 1][j] === false;
@@ -1314,23 +1721,19 @@ function init() {
     }
   }
 
-  const wallpaperTex = generateSurfaceTextures({
-    seed: 3, baseColor: [188, 168, 84], noiseScale: 5, octaves: 4,
-    stainStrength: 0.35, stainScale: 0.4, bumpStrength: 1.6, roughBase: 165,
-    roughVar: 55, stripeFreq: 48, colorJitter: 0.18,
-  });
+  const wallpaperTex = generateWallpaperTexture({ seed: 3 + level, darken: theme.darken });
   wallpaperTex.map.repeat.set(2, 1); wallpaperTex.roughnessMap.repeat.set(2, 1); wallpaperTex.normalMap.repeat.set(2, 1);
 
   const carpetTex = generateSurfaceTextures({
-    seed: 11, baseColor: [70, 64, 40], noiseScale: 16, octaves: 4,
-    stainStrength: 0.65, stainScale: 0.25, bumpStrength: 3.2, roughBase: 205,
+    seed: 11 + level, baseColor: [mix(70, 30, theme.darken), mix(64, 20, theme.darken), mix(40, 20, theme.darken)],
+    noiseScale: 16, octaves: 4, stainStrength: 0.65, stainScale: 0.25, bumpStrength: 3.2, roughBase: 205,
     roughVar: 35, colorJitter: 0.3,
   });
   carpetTex.map.repeat.set(N * 1.4, N * 1.4); carpetTex.roughnessMap.repeat.set(N * 1.4, N * 1.4); carpetTex.normalMap.repeat.set(N * 1.4, N * 1.4);
 
   const ceilingTex = generateSurfaceTextures({
-    seed: 5, baseColor: [212, 204, 176], noiseScale: 4, octaves: 3,
-    stainStrength: 0.3, stainScale: 0.5, bumpStrength: 1.0, roughBase: 190,
+    seed: 5 + level, baseColor: [mix(212, 90, theme.darken), mix(204, 84, theme.darken), mix(176, 78, theme.darken)],
+    noiseScale: 4, octaves: 3, stainStrength: 0.3, stainScale: 0.5, bumpStrength: 1.0, roughBase: 190,
     roughVar: 30, tileGrid: 12, colorJitter: 0.12,
   });
   ceilingTex.map.repeat.set(N / 3, N / 3); ceilingTex.roughnessMap.repeat.set(N / 3, N / 3); ceilingTex.normalMap.repeat.set(N / 3, N / 3);
@@ -1351,11 +1754,11 @@ function init() {
   const worldSize = N * CELL;
   const floorGeo = new THREE.PlaneGeometry(worldSize, worldSize); floorGeo.rotateX(-Math.PI / 2);
   const floorMesh = new THREE.Mesh(floorGeo, floorMaterial); floorMesh.receiveShadow = true;
-  scene.add(floorMesh);
+  levelGroup.add(floorMesh);
 
   const ceilGeo = new THREE.PlaneGeometry(worldSize, worldSize); ceilGeo.rotateX(Math.PI / 2);
   const ceilMesh = new THREE.Mesh(ceilGeo, ceilingMaterial); ceilMesh.position.y = CONFIG.wallHeight; ceilMesh.receiveShadow = true;
-  scene.add(ceilMesh);
+  levelGroup.add(ceilMesh);
 
   const wallGeo = new THREE.BoxGeometry(CELL, CONFIG.wallHeight, CONFIG.wallThickness);
   let wallCount = 0;
@@ -1380,7 +1783,7 @@ function init() {
       wallInstanced.setMatrixAt(idx++, m);
     }
   }
-  scene.add(wallInstanced);
+  levelGroup.add(wallInstanced);
 
   const pillarCells = [];
   for (let i = 1; i < N - 1; i++) for (let j = 1; j < N - 1; j++) {
@@ -1402,11 +1805,20 @@ function init() {
        [c.x + h, c.z + h, c.x - h, c.z + h], [c.x - h, c.z + h, c.x - h, c.z - h]]
         .forEach(([x1, z1, x2, z2]) => addSegment(i, j, { x1, z1, x2, z2 }));
     });
-    scene.add(pillarInstanced);
+    levelGroup.add(pillarInstanced);
   }
 
-  scene.add(new THREE.HemisphereLight(0xa89a58, 0x24200f, 0.55));
+  if (!hemiLight) { hemiLight = new THREE.HemisphereLight(0xa89a58, 0x24200f, 0.55); scene.add(hemiLight); }
+  hemiLight.color.copy(theme.hemiSky);
+  hemiLight.groundColor.copy(theme.hemiGround);
+  hemiLight.intensity = theme.hemiIntensity;
 
+  scene.fog.color.copy(theme.fogColor);
+  CONFIG.fogDensity = theme.fogDensity;
+  scene.fog.density = theme.fogDensity;
+  flashDarkBias = theme.flashOffBias;
+
+  fixturesData = [];
   const fixturePositions = [];
   for (let i = 1; i < N - 1; i += CONFIG.fixtureSpacing)
     for (let j = 1; j < N - 1; j += CONFIG.fixtureSpacing)
@@ -1428,11 +1840,97 @@ function init() {
       housingInst.setMatrixAt(idx, m);
       m.compose(new THREE.Vector3(c.x, CONFIG.wallHeight - 0.105, c.z), new THREE.Quaternion(), new THREE.Vector3(1, 1, 1));
       panelInst.setMatrixAt(idx, m);
-      fixturesData.push({ x: c.x, z: c.z, seed: Math.random() * 1000, baseIntensity: 13 });
+      fixturesData.push({ x: c.x, z: c.z, seed: Math.random() * 1000, baseIntensity: theme.fixtureIntensity });
     });
-    scene.add(housingInst);
-    scene.add(panelInst);
+    levelGroup.add(housingInst);
+    levelGroup.add(panelInst);
   }
+
+  // --- blood decals: more of them, the deeper you go ---
+  const bloodGeoCache = null;
+  for (let k = 0; k < theme.bloodFloorCount; k++) {
+    const i = 1 + Math.floor(Math.random() * (N - 2)), j = 1 + Math.floor(Math.random() * (N - 2));
+    const c = cellCenter(i, j);
+    const tex = makeBloodTexture(Math.floor(Math.random() * 99999));
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+    const size = 0.9 + Math.random() * 1.7;
+    const geo = new THREE.PlaneGeometry(size, size); geo.rotateX(-Math.PI / 2);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(c.x + (Math.random() - 0.5) * CELL * 0.5, 0.012, c.z + (Math.random() - 0.5) * CELL * 0.5);
+    mesh.rotation.y = Math.random() * Math.PI * 2;
+    levelGroup.add(mesh);
+  }
+  for (let k = 0; k < theme.bloodWallCount; k++) {
+    const i = 1 + Math.floor(Math.random() * (N - 2)), j = 1 + Math.floor(Math.random() * (N - 2));
+    const c = cellCenter(i, j);
+    const tex = makeBloodTexture(Math.floor(Math.random() * 99999));
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    const size = 0.7 + Math.random() * 1.1;
+    const geo = new THREE.PlaneGeometry(size, size);
+    const mesh = new THREE.Mesh(geo, mat);
+    const onXWall = Math.random() < 0.5;
+    if (onXWall) mesh.position.set(c.x, CONFIG.wallHeight * (0.25 + Math.random() * 0.4), c.z + (Math.random() < 0.5 ? -1 : 1) * (CELL / 2 - 0.02));
+    else { mesh.position.set(c.x + (Math.random() < 0.5 ? -1 : 1) * (CELL / 2 - 0.02), CONFIG.wallHeight * (0.25 + Math.random() * 0.4), c.z); mesh.rotation.y = Math.PI / 2; }
+    levelGroup.add(mesh);
+  }
+
+  // --- the door: placed at the far end of this level's maze ---
+  const startCell = { i: Math.floor(N / 2), j: Math.floor(N / 2) };
+  const doorCell = findFarCell(startCell.i, startCell.j);
+  const doorMesh = buildDoorMesh();
+  const doorPos = cellCenter(doorCell.i, doorCell.j);
+  doorMesh.position.set(doorPos.x, 0, doorPos.z);
+  doorMesh.rotation.y = Math.random() < 0.5 ? 0 : Math.PI / 2;
+  levelGroup.add(doorMesh);
+  doorState = { i: doorCell.i, j: doorCell.j, x: doorPos.x, z: doorPos.z, mesh: doorMesh };
+
+  scene.add(levelGroup);
+
+  const startPos = cellCenter(startCell.i, startCell.j);
+  playerPos = new THREE.Vector3(startPos.x, CONFIG.eyeHeight, startPos.z);
+  velocity = new THREE.Vector3();
+  camera.position.copy(playerPos);
+  revealed = new Set();
+}
+
+/* ======================================================================
+   LEVEL TRANSITION — triggered by walking up to the door.
+   ====================================================================== */
+function maybeTriggerDoor() {
+  if (!doorState || transitioning) return;
+  const dx = playerPos.x - doorState.x, dz = playerPos.z - doorState.z;
+  const dist = Math.hypot(dx, dz);
+  const prompt = document.getElementById('door-prompt');
+  if (dist < 2.4 && revealed.has(doorState.i + ',' + doorState.j)) prompt.classList.add('visible');
+  else prompt.classList.remove('visible');
+  if (dist < 0.85) startLevelTransition();
+}
+function startLevelTransition() {
+  if (transitioning) return;
+  transitioning = true;
+  document.getElementById('door-prompt').classList.remove('visible');
+  const overlay = document.getElementById('level-transition');
+  const caption = document.getElementById('level-caption');
+  overlay.classList.add('active');
+  setTimeout(() => {
+    currentLevel++;
+    caption.textContent = 'УРОВЕНЬ ' + currentLevel;
+    document.title = 'ЗАКУЛИСЬЕ — Level ' + currentLevel;
+    const label = document.getElementById('minimap-label');
+    if (label) label.textContent = 'УРОВЕНЬ ' + currentLevel + ' — СКАНЕР';
+    buildLevel(currentLevel);
+  }, 1150);
+  setTimeout(() => {
+    overlay.classList.remove('active');
+    transitioning = false;
+  }, 2500);
+}
+
+function init() {
+  hemiLight = null;
+  buildFlashlight();
+  buildSoundZones();
+  buildFootsteps();
 
   for (let p = 0; p < CONFIG.lightPoolSize; p++) {
     const light = new THREE.PointLight(0xfff2c8, 0, 10.5, 2.0);
@@ -1446,16 +1944,7 @@ function init() {
     lightPool.push({ light, assigned: -1 });
   }
 
-  buildFlashlight();
-  buildSoundZones();
-  buildFootsteps();
-
-  const startCell = { i: Math.floor(N / 2), j: Math.floor(N / 2) };
-  const startPos = cellCenter(startCell.i, startCell.j);
-  playerPos = new THREE.Vector3(startPos.x, CONFIG.eyeHeight, startPos.z);
-  velocity = new THREE.Vector3();
-  camera.position.copy(playerPos);
-  revealed = new Set();
+  buildLevel(0);
 
   const blocker = document.getElementById('blocker');
 
@@ -1482,6 +1971,10 @@ function init() {
   window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
     if (e.code === 'Tab' || e.code === 'KeyM') { e.preventDefault(); toggleMinimap(); }
+    if (e.code === 'KeyE' && doorState && !transitioning) {
+      const dist = Math.hypot(playerPos.x - doorState.x, playerPos.z - doorState.z);
+      if (dist < 2.4) startLevelTransition();
+    }
   });
   window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
@@ -1508,6 +2001,7 @@ function init() {
       bobY = Math.sin(walkCycle * 2.0) * 0.045;
       fogTimer += dt;
       if (fogTimer > 0.15) { fogTimer = 0; updateFog(); }
+      maybeTriggerDoor();
     }
     updateLights(time);
     updateFlashlight(dt, time, bobX, bobY);
