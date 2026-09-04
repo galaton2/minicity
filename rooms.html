@@ -1075,17 +1075,30 @@ function makeDripBuffer(ctx, duration) {
   }
   return buf;
 }
+
+// --- ИЗМЕНЕННАЯ ФУНКЦИЯ ГЕНЕРАЦИИ ШАГОВ ---
 function makeFootstepBuffer(ctx) {
-  const dur = 0.16;
+  const dur = 0.22; // Немного увеличили длительность для естественного затухания
   const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
   const data = buf.getChannelData(0);
-  let prev = 0;
+  let noiseFilter = 0;
+
   for (let i = 0; i < data.length; i++) {
     const t = i / ctx.sampleRate;
-    const env = Math.exp(-t * 22);
+
+    // 1. Низкочастотный глухой удар (пятка бьет о пол)
+    const thumpEnv = Math.exp(-t * 30);
+    const freq = 90 * Math.exp(-t * 20); // Плавное понижение частоты удара
+    const thump = Math.sin(2 * Math.PI * freq * t) * thumpEnv;
+
+    // 2. Высокочастотный шорох (подошва трется о ковер)
     const white = Math.random() * 2 - 1;
-    prev = (prev + 0.35 * white) / 1.35; // soft, carpet-muffled thud
-    data[i] = prev * env * 1.8;
+    noiseFilter = noiseFilter + 0.15 * (white - noiseFilter); // Смягчаем белый шум
+    const scuffEnv = Math.exp(-t * 25);
+    const scuff = noiseFilter * scuffEnv * 0.5;
+
+    // Смешиваем удар и шорох, сильно понижая итоговую громкость (было 1.8, стало 0.35)
+    data[i] = (thump * 0.7 + scuff * 0.4) * 0.35;
   }
   return buf;
 }
@@ -1138,6 +1151,8 @@ function buildFootsteps() {
   for (let i = 0; i < 4; i++) footstepBuffers.push(makeFootstepBuffer(ctx));
   for (let i = 0; i < 3; i++) footstepAudios.push(new THREE.Audio(listener));
 }
+
+// --- ИЗМЕНЕННАЯ ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ---
 function updateFootsteps(dt, speedMag, isMoving, running) {
   if (!running || !isMoving) { stepDist = 0; return; }
   stepDist += speedMag * dt;
@@ -1148,12 +1163,13 @@ function updateFootsteps(dt, speedMag, isMoving, running) {
     if (a.isPlaying) a.stop();
     const buf = footstepBuffers[Math.floor(Math.random() * footstepBuffers.length)];
     a.setBuffer(buf);
-    a.setVolume((0.32 + Math.random() * 0.12) * CONFIG.stepVolume);
-    a.setPlaybackRate(0.92 + Math.random() * 0.2);
+    
+    // Уменьшена базовая громкость при ходьбе и добавлен больший разброс по высоте тона
+    a.setVolume((0.15 + Math.random() * 0.08) * CONFIG.stepVolume);
+    a.setPlaybackRate(0.85 + Math.random() * 0.25);
     a.play();
   }
 }
-
 /* ======================================================================
    FPS COUNTER
    ====================================================================== */
