@@ -2,11 +2,15 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
 <title>ЗАКУЛИСЬЕ — Level 0</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
-  html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:'Courier New', monospace; cursor:auto; }
+  html,body { width:100%; height:100%; height:100dvh; overflow:hidden; background:#000; font-family:'Courier New', monospace; cursor:auto; overscroll-behavior:none; }
   canvas { display:block; }
 
   #loading-screen{
@@ -159,6 +163,47 @@
     pointer-events:none; text-align:center;
   }
   #door-prompt.visible{ opacity:.9; }
+
+  /* --- pause overlay (tab switch / app background / lost focus) --- */
+  #pause-overlay{
+    position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center;
+    flex-direction:column; background:rgba(0,0,0,0.86); color:#c9b86a; text-align:center;
+    letter-spacing:2px; cursor:pointer;
+  }
+  #pause-overlay.visible{ display:flex; }
+  #pause-overlay h1{ font-size:1.9em; margin-bottom:10px; text-shadow:0 0 20px #7a6a1a; }
+  #pause-overlay p{ font-size:0.85em; opacity:.7; max-width:420px; padding:0 20px; line-height:1.6em; }
+
+  /* --- touch jump button --- */
+  #jump-btn{
+    position:fixed; right:30px; bottom:36px; width:76px; height:76px; border-radius:50%;
+    background:rgba(255,255,255,0.09); border:2px solid rgba(255,255,255,0.28); display:none; z-index:40;
+    color:#e8dfae; font-size:26px; align-items:center; justify-content:center; letter-spacing:0;
+  }
+  #jump-btn:active{ background:rgba(255,255,255,0.22); }
+
+  /* --- iOS fullscreen hint modal --- */
+  #ios-fs-hint{
+    position:fixed; inset:0; z-index:75; display:none; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.75);
+  }
+  #ios-fs-hint.visible{ display:flex; }
+  #ios-fs-hint-box{
+    width:min(420px,86vw); background:rgba(14,13,7,0.97); border:2px solid rgba(200,184,106,0.4);
+    border-radius:16px; padding:24px 22px; color:#e7dda0; text-align:center;
+  }
+  #ios-fs-hint-box h3{ font-size:14px; letter-spacing:1.5px; color:#c9b86a; margin-bottom:12px; }
+  #ios-fs-hint-box p{ font-size:12.5px; line-height:1.75em; opacity:.9; margin-bottom:16px; }
+  #ios-fs-hint-close{
+    width:100%; padding:10px; background:linear-gradient(180deg,#8f7a2c,#6b5a1e); border:1px solid rgba(230,210,140,0.5);
+    color:#fff3c8; border-radius:10px; font-family:inherit; font-size:12.5px; letter-spacing:1px; cursor:pointer;
+  }
+
+  /* safe-area padding so controls don't sit under iPhone notch/home-bar */
+  #top-tools{ padding-top:env(safe-area-inset-top); }
+  #map-btn{ margin-top:env(safe-area-inset-top); }
+  #joystick-base{ margin-bottom:env(safe-area-inset-bottom); }
+  #jump-btn{ margin-bottom:env(safe-area-inset-bottom); }
 </style>
 </head>
 <body>
@@ -190,7 +235,22 @@
 <div id="crosshair"></div>
 
 <div id="hud-info">
-  WASD — движение&nbsp;&nbsp;|&nbsp;&nbsp;SHIFT — бег&nbsp;&nbsp;|&nbsp;&nbsp;МЫШЬ — обзор&nbsp;&nbsp;|&nbsp;&nbsp;M / TAB — карта&nbsp;&nbsp;|&nbsp;&nbsp;ESC — пауза
+  WASD — движение&nbsp;&nbsp;|&nbsp;&nbsp;SHIFT — бег&nbsp;&nbsp;|&nbsp;&nbsp;ПРОБЕЛ — прыжок&nbsp;&nbsp;|&nbsp;&nbsp;МЫШЬ — обзор&nbsp;&nbsp;|&nbsp;&nbsp;M / TAB — карта&nbsp;&nbsp;|&nbsp;&nbsp;ESC — пауза
+</div>
+
+<div id="pause-overlay">
+  <h1>ПАУЗА</h1>
+  <p id="pause-overlay-text">Игра остановлена — вы переключились в другое окно/вкладку.<br>Нажмите, чтобы продолжить.</p>
+</div>
+
+<div id="ios-fs-hint">
+  <div id="ios-fs-hint-box">
+    <h3>ПОЛНЫЙ ЭКРАН НА IPHONE</h3>
+    <p>Safari на iPhone не позволяет сайтам включать настоящий полноэкранный режим.
+       Чтобы играть без панелей браузера: нажмите кнопку «Поделиться» внизу экрана,
+       затем выберите «На экран «Домой»» — и открывайте игру с этого значка, как обычное приложение.</p>
+    <button id="ios-fs-hint-close">Понятно</button>
+  </div>
 </div>
 
 <div id="level-transition"><div class="level-caption" id="level-caption"></div></div>
@@ -205,6 +265,7 @@
 </div>
 
 <div id="joystick-base"><div id="joystick-knob"></div></div>
+<div id="jump-btn">⤒</div>
 
 <div class="tool-btn" id="map-btn">🧭</div>
 
@@ -310,10 +371,25 @@ import * as THREE from 'three';
    DEVICE DETECTION
    ====================================================================== */
 const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+// iPhone/iPod, plus iPadOS 13+ which disguises itself as "MacIntel" but has touch.
+const isIOS = /iP(hone|od|ad)/.test(navigator.platform) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/i.test(navigator.userAgent);
+// Real desktop (non-touch) — this is the class of machine most likely to be
+// running an older/integrated GPU, so it gets the same conservative defaults
+// as iOS rather than assuming "PC = powerful".
+const deviceTier = isIOS ? 'ios' : (isTouch ? 'mobile' : 'desktop');
 
 /* ======================================================================
    CONFIG
    ====================================================================== */
+const TIER_DEFAULTS = {
+  //            lightPool active shadowPool texSize renderScale
+  ios:      { lightPoolSize: 5, activeLights: 3, shadowPoolCount: 0, textureSize: 384, renderScale: 1.0 },
+  mobile:   { lightPoolSize: 6, activeLights: 5, shadowPoolCount: 1, textureSize: 512, renderScale: 1.3 },
+  desktop:  { lightPoolSize: 8, activeLights: 5, shadowPoolCount: 1, textureSize: 640, renderScale: 1.0 },
+}[deviceTier];
+
 const CONFIG = {
   gridSize: 22,
   cellSize: 4,
@@ -324,16 +400,22 @@ const CONFIG = {
   walkSpeed: 2.35,
   sprintSpeed: 4.35,
   accel: 8.0,
+  gravity: -20,
+  jumpSpeed: 6.0,
   fixtureSpacing: 4,
-  lightPoolSize: isTouch ? 6 : 10,
-  activeLights: isTouch ? 5 : 7,
-  shadowPoolCount: isTouch ? 1 : 2,
-  shadowsEnabled: true,
+  lightPoolSize: TIER_DEFAULTS.lightPoolSize,
+  activeLights: TIER_DEFAULTS.activeLights,
+  shadowPoolCount: TIER_DEFAULTS.shadowPoolCount,
+  shadowsEnabled: TIER_DEFAULTS.shadowPoolCount > 0,
   lightCullRadius: 20,
   braidChance: 0.30,
   pillarChance: 0.05,
-  textureSize: isTouch ? 512 : 768,
-  renderScale: isTouch ? 1.5 : 1.3,
+  pitChance: 0.035,
+  propChance: 0.05,
+  textureSize: TIER_DEFAULTS.textureSize,
+  renderScale: TIER_DEFAULTS.renderScale,
+  cullDistance: 30,       // chunks fully outside this + outside the view frustum stop being drawn at all
+  chunkCells: 4,          // maze cells per culling chunk (per side)
   sensitivity: 1.0,
   touchSensitivity: 1.0,
   invertX: false,
@@ -702,11 +784,14 @@ camera.rotation.order = 'YXZ';
 // light anything before.
 scene.add(camera);
 
-const renderer = new THREE.WebGLRenderer({ antialias: !isTouch, powerPreference: 'high-performance' });
+// Native MSAA (antialias:true) stacked on top of the renderScale supersample
+// was paying for edge smoothing twice — it's the single biggest desktop/iOS
+// cost cut here. renderScale alone already smooths edges close to as well.
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = CONFIG.shadowsEnabled;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -777,12 +862,19 @@ let lightPool = [];
 let minimapOpen = false;
 let gameActive = false;
 let hasShownWelcome = false;
+let gameStarted = false;   // true once the player has ever actually entered the game
+let gamePaused = false;    // true while tab/app is backgrounded or unfocused
 let soundZonesStarted = false;
 const keys = {};
 let currentLevel = 0;
 let levelGroup = null;
 let doorState = null; // { i, j, x, z, mesh }
 let transitioning = false;
+let jumpRequested = false;
+let playerVelY = 0, playerVerticalOffset = 0, grounded = true;
+let levelChunks = []; // { group, cx, cz, radius } — populated per buildLevel() for view-frustum/distance culling
+let flashlightEnabledThisLevel = false;
+let noFlickerThisLevel = false;
 let hemiLight = null;
 function mix(a, b, t) { return a + (b - a) * t; }
 
@@ -793,7 +885,7 @@ function closestPointOnSegment(px, pz, s) {
   t = Math.max(0, Math.min(1, t));
   return { x: s.x1 + dx * t, z: s.z1 + dz * t };
 }
-function resolveCollisions(pos, radius) {
+function resolveCollisions(pos, radius, clearingBarriers) {
   for (let iter = 0; iter < 4; iter++) {
     const { i, j } = worldToCell(pos.x, pos.z, N, ORIGIN, CELL);
     for (let dj = -1; dj <= 1; dj++) {
@@ -801,6 +893,7 @@ function resolveCollisions(pos, radius) {
         const arr = segmentBuckets.get((i + di) + ',' + (j + dj));
         if (!arr) continue;
         for (const s of arr) {
+          if (s.lowBarrier && clearingBarriers) continue; // mid-jump clears pit curbs
           const cp = closestPointOnSegment(pos.x, pos.z, s);
           const dx = pos.x - cp.x, dz = pos.z - cp.z;
           const dist = Math.hypot(dx, dz);
@@ -842,12 +935,16 @@ let lookTouchId = null, lookLast = { x: 0, y: 0 };
 function setupTouchControls() {
   const base = document.getElementById('joystick-base');
   const knob = document.getElementById('joystick-knob');
+  const jumpBtn = document.getElementById('jump-btn');
   base.style.display = 'block';
+  jumpBtn.style.display = 'flex';
   document.getElementById('map-btn').style.display = 'flex';
+
+  jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); jumpRequested = true; }, { passive: false });
 
   function isUIPoint(x, y) {
     const el = document.elementFromPoint(x, y);
-    return el && el.closest && el.closest('#top-tools,#map-btn,#settings-panel,#minimap-wrap,#welcome-modal,#blocker');
+    return el && el.closest && el.closest('#top-tools,#map-btn,#jump-btn,#settings-panel,#minimap-wrap,#welcome-modal,#blocker,#pause-overlay,#ios-fs-hint');
   }
 
   function onStart(e) {
@@ -908,6 +1005,7 @@ function setupDesktopControls() {
     const blocker = document.getElementById('blocker');
     const hudInfo = document.getElementById('hud-info');
     if (pointerLocked) {
+      gameStarted = true;
       blocker.style.opacity = '0';
       setTimeout(() => blocker.style.display = 'none', 400);
       setTimeout(() => hudInfo.classList.add('hidden'), 6000);
@@ -933,6 +1031,33 @@ function setupDesktopControls() {
 }
 
 /* ======================================================================
+   PAUSE — switching tabs, minimizing, or backgrounding the app (mobile)
+   freezes movement/physics/monster-events and mutes all audio, regardless
+   of platform. Coming back requires an explicit tap/click to resume, which
+   also conveniently satisfies iOS's "must be a real user gesture" rule for
+   restarting audio and re-requesting pointer lock.
+   ====================================================================== */
+const pauseOverlay = document.getElementById('pause-overlay');
+function pauseGame() {
+  if (!gameStarted || gamePaused) return;
+  gamePaused = true;
+  pauseOverlay.classList.add('visible');
+  listener.setMasterVolume(0);
+}
+function resumeGame() {
+  if (!gamePaused) return;
+  gamePaused = false;
+  pauseOverlay.classList.remove('visible');
+  listener.setMasterVolume(CONFIG.masterVolume);
+  resumeAudio();
+  if (!isTouch) requestLock(); // requires the click below to count as a user gesture — it does
+}
+pauseOverlay.addEventListener('click', resumeGame);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+window.addEventListener('blur', () => pauseGame());
+window.addEventListener('pagehide', () => pauseGame());
+
+/* ======================================================================
    WELCOME MODAL
    ====================================================================== */
 function showWelcome(onProceed) {
@@ -940,8 +1065,10 @@ function showWelcome(onProceed) {
   const modal = document.getElementById('welcome-modal');
   modal.classList.add('visible');
   const cleanup = () => modal.classList.remove('visible');
-  document.getElementById('welcome-fullscreen-btn').onclick = () => {
-    document.documentElement.requestFullscreen?.().catch(() => {});
+  const fsBtn = document.getElementById('welcome-fullscreen-btn');
+  if (isIOS && !isStandaloneApp) fsBtn.textContent = 'Как играть без панелей Safari';
+  fsBtn.onclick = () => {
+    requestGameFullscreen();
     cleanup(); onProceed();
   };
   document.getElementById('welcome-close').onclick = () => { cleanup(); onProceed(); };
@@ -988,7 +1115,21 @@ function updateMovement(dt) {
 
   playerPos.x += velocity.x * dt;
   playerPos.z += velocity.z * dt;
-  resolveCollisions(playerPos, CONFIG.playerRadius);
+
+  // --- jump / gravity ---
+  if (jumpRequested && grounded) {
+    playerVelY = CONFIG.jumpSpeed;
+    grounded = false;
+  }
+  jumpRequested = false;
+  playerVelY += CONFIG.gravity * dt;
+  playerVerticalOffset += playerVelY * dt;
+  if (playerVerticalOffset <= 0) { playerVerticalOffset = 0; playerVelY = 0; grounded = true; }
+  // mid-jump (clear of the ground by a bit) lets the player hop over the
+  // low collision curbs that ring the floor pits
+  const clearingBarriers = playerVerticalOffset > 0.32;
+
+  resolveCollisions(playerPos, CONFIG.playerRadius, clearingBarriers);
 
   const speedMag = Math.hypot(velocity.x, velocity.z);
   const isMoving = len > 0.01 && speedMag > 0.25;
@@ -996,16 +1137,16 @@ function updateMovement(dt) {
   breatheCycle += dt;
 
   let bobY = 0, bobX = 0, roll = 0;
-  if (isMoving) {
+  if (isMoving && grounded) {
     bobY = Math.sin(walkCycle * 2.0) * 0.045 * (sprint ? 1.25 : 1);
     bobX = Math.sin(walkCycle) * 0.028;
     roll = Math.sin(walkCycle) * 0.012;
-  } else {
+  } else if (grounded) {
     bobY = Math.sin(breatheCycle * 1.15) * 0.011;
     roll = Math.sin(breatheCycle * 0.5) * 0.003;
   }
 
-  camera.position.set(playerPos.x, playerPos.y + bobY, playerPos.z);
+  camera.position.set(playerPos.x, playerPos.y + playerVerticalOffset + bobY, playerPos.z);
   camera.position.addScaledVector(rightVec, bobX);
   camera.rotation.z = roll;
 
@@ -1452,27 +1593,30 @@ function updateFPS(now) {
     autoTuneQuality(fps);
   }
 }
-// Desktop GPUs vary wildly, so instead of a single fixed render scale we
-// step it down automatically when the frame rate is genuinely struggling,
-// and cautiously step it back up if things recover. Touch devices are left
-// alone since they already ran fine.
+// GPUs (desktop integrated graphics, iOS Safari's WebGL stack, budget Android
+// phones) all vary wildly, so instead of trusting one fixed render scale per
+// device class we step it down automatically whenever the frame rate is
+// genuinely struggling, and cautiously step it back up if things recover.
+// This now runs on EVERY platform — the previous version skipped all touch
+// devices, which is exactly why a struggling iPhone had nothing rescuing it.
+const RECOVER_CEILING = TIER_DEFAULTS.renderScale;
 function autoTuneQuality(fps) {
-  if (isTouch || !autoQualityEnabled) return;
+  if (!autoQualityEnabled) return;
   if (fps < 40) {
     lowFpsStreak++; goodFpsStreak = 0;
     if (lowFpsStreak >= 3) {
       lowFpsStreak = 0;
       let changed = false;
-      if (CONFIG.renderScale > 1.0) {
-        CONFIG.renderScale = Math.max(1.0, +(CONFIG.renderScale - 0.15).toFixed(2));
+      if (CONFIG.renderScale > 0.6) {
+        CONFIG.renderScale = Math.max(0.6, +(CONFIG.renderScale - 0.15).toFixed(2));
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
         changed = true;
       } else if (CONFIG.shadowsEnabled) {
         CONFIG.shadowsEnabled = false;
         renderer.shadowMap.enabled = false;
         changed = true;
-      } else if (CONFIG.activeLights > 3) {
-        CONFIG.activeLights = Math.max(3, CONFIG.activeLights - 1);
+      } else if (CONFIG.activeLights > 2) {
+        CONFIG.activeLights = Math.max(2, CONFIG.activeLights - 1);
         changed = true;
       }
       if (changed) {
@@ -1486,9 +1630,9 @@ function autoTuneQuality(fps) {
     }
   } else if (fps > 58) {
     goodFpsStreak++; lowFpsStreak = 0;
-    if (goodFpsStreak >= 12 && CONFIG.renderScale < 1.3) {
+    if (goodFpsStreak >= 12 && CONFIG.renderScale < RECOVER_CEILING) {
       goodFpsStreak = 0;
-      CONFIG.renderScale = Math.min(1.3, +(CONFIG.renderScale + 0.1).toFixed(2));
+      CONFIG.renderScale = Math.min(RECOVER_CEILING, +(CONFIG.renderScale + 0.1).toFixed(2));
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
       const scaleEl = document.getElementById('opt-scale'), scaleVal = document.getElementById('scale-val');
       if (scaleEl) { scaleEl.value = CONFIG.renderScale; scaleVal.textContent = CONFIG.renderScale.toFixed(2) + '×'; }
@@ -1503,11 +1647,11 @@ function autoTuneQuality(fps) {
    ====================================================================== */
 function applyQualityPreset(preset) {
   if (preset === 'low') {
-    CONFIG.renderScale = 1.0; CONFIG.shadowsEnabled = false; CONFIG.activeLights = Math.min(CONFIG.activeLights, 3); CONFIG.fogDensity = 0.045;
+    CONFIG.renderScale = 0.8; CONFIG.shadowsEnabled = false; CONFIG.activeLights = Math.min(CONFIG.activeLights, 3); CONFIG.fogDensity = 0.045;
   } else if (preset === 'medium') {
-    CONFIG.renderScale = 1.5; CONFIG.shadowsEnabled = true; CONFIG.activeLights = Math.min(CONFIG.activeLights, 5); CONFIG.fogDensity = 0.03;
+    CONFIG.renderScale = Math.min(1.2, TIER_DEFAULTS.renderScale); CONFIG.shadowsEnabled = TIER_DEFAULTS.shadowPoolCount > 0; CONFIG.activeLights = Math.min(CONFIG.activeLights, 4); CONFIG.fogDensity = 0.03;
   } else {
-    CONFIG.renderScale = isTouch ? 1.5 : 1.3; CONFIG.shadowsEnabled = true; CONFIG.activeLights = Math.min(lightPool.length, isTouch ? 5 : 7); CONFIG.fogDensity = 0.02;
+    CONFIG.renderScale = TIER_DEFAULTS.renderScale; CONFIG.shadowsEnabled = TIER_DEFAULTS.shadowPoolCount > 0; CONFIG.activeLights = Math.min(lightPool.length, TIER_DEFAULTS.activeLights); CONFIG.fogDensity = 0.02;
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderScale));
   renderer.shadowMap.enabled = CONFIG.shadowsEnabled;
@@ -1583,11 +1727,47 @@ function setupSettingsUI() {
     document.getElementById('step-vol-val').textContent = e.target.value + '%';
   });
 
-  document.getElementById('fullscreen-btn').addEventListener('click', () => {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
-    else document.exitFullscreen();
-  });
+  document.getElementById('fullscreen-btn').addEventListener('click', () => requestGameFullscreen());
+
+  // Reflect the device-tier defaults actually in effect (they differ per
+  // platform now) instead of the static markup values baked into the HTML.
+  document.getElementById('opt-quality').value = deviceTier === 'ios' ? 'low' : (deviceTier === 'mobile' ? 'high' : 'medium');
+  document.getElementById('quality-val').textContent = document.getElementById('opt-quality').selectedOptions[0].text;
+  document.getElementById('opt-scale').value = CONFIG.renderScale;
+  document.getElementById('scale-val').textContent = CONFIG.renderScale.toFixed(1) + '×';
+  document.getElementById('opt-shadows').checked = CONFIG.shadowsEnabled;
+  document.getElementById('opt-lights').max = Math.max(1, lightPool.length);
+  document.getElementById('opt-lights').value = CONFIG.activeLights;
+  document.getElementById('lights-val').textContent = CONFIG.activeLights;
 }
+
+/* ======================================================================
+   FULLSCREEN — iPhone Safari has no Fullscreen API for regular web pages
+   (only iPadOS and desktop browsers support it), so a plain requestFullscreen()
+   call there just silently rejects and looks like a broken button. We detect
+   that up front and show real instructions instead of pretending it worked.
+   ====================================================================== */
+const fullscreenSupported = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const isStandaloneApp = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+function requestGameFullscreen() {
+  if (isStandaloneApp) return; // already chrome-less (launched from Home Screen icon)
+  if (!fullscreenSupported) {
+    document.getElementById('ios-fs-hint').classList.add('visible');
+    return;
+  }
+  const el = document.documentElement;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    (el.requestFullscreen ? el.requestFullscreen() : el.webkitRequestFullscreen()).catch(() => {});
+  } else {
+    (document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen()).catch?.(() => {});
+  }
+}
+document.getElementById('ios-fs-hint-close').addEventListener('click', () => {
+  document.getElementById('ios-fs-hint').classList.remove('visible');
+});
+document.getElementById('ios-fs-hint').addEventListener('click', (e) => {
+  if (e.target.id === 'ios-fs-hint') document.getElementById('ios-fs-hint').classList.remove('visible');
+});
 
 /* ======================================================================
    INIT
@@ -1957,6 +2137,7 @@ function init() {
         setTimeout(() => blocker.style.display = 'none', 400);
         setTimeout(() => document.getElementById('hud-info').classList.add('hidden'), 5000);
         gameActive = true;
+        gameStarted = true;
         lookEuler.setFromQuaternion(camera.quaternion);
         resumeAudio();
         startSoundZones();
@@ -1971,6 +2152,7 @@ function init() {
   window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
     if (e.code === 'Tab' || e.code === 'KeyM') { e.preventDefault(); toggleMinimap(); }
+    if (e.code === 'Space') { e.preventDefault(); jumpRequested = true; }
     if (e.code === 'KeyE' && doorState && !transitioning) {
       const dist = Math.hypot(playerPos.x - doorState.x, playerPos.z - doorState.z);
       if (dist < 2.4) startLevelTransition();
