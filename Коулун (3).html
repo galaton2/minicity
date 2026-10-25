@@ -1,0 +1,3154 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Коулун</title>
+<style>
+:root{--ink:#e9f3ef;--dim:#9db3ad;--acc:#d9b92e;--bg:#0f191d;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;background:var(--bg);overflow:hidden;color:var(--ink);font-family:system-ui,"Noto Sans",sans-serif}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse at center,transparent 48%,rgba(0,0,0,.62))}
+body::before{content:"";position:fixed;inset:-50%;pointer-events:none;z-index:1;background:var(--grain);opacity:.06;mix-blend-mode:overlay;animation:gr .8s steps(4) infinite}
+@keyframes gr{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-1%)}}
+#ui{position:fixed;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(6,10,13,.7);text-align:center;padding:24px;transition:opacity .9s}
+#ui.off{opacity:0;pointer-events:none}
+#hint{position:fixed;left:0;right:0;z-index:3;bottom:calc(20px + env(safe-area-inset-bottom,0px));text-align:center;color:var(--dim);font-size:14px;opacity:0;transition:opacity 2s;pointer-events:none}
+#hint.on{opacity:.8}
+h1{margin:0;font:600 clamp(52px,13vw,120px)/1 "Noto Serif TC","Songti TC",serif;letter-spacing:.14em;text-shadow:0 0 24px rgba(217,185,46,.5)}
+p{margin:16px auto 0;max-width:36ch;line-height:1.55;color:var(--dim)}
+button{margin-top:28px;padding:14px 40px;font:600 17px system-ui,sans-serif;color:var(--ink);background:transparent;border:2px solid var(--acc);border-radius:4px;cursor:pointer}
+button:hover,button:focus-visible{background:rgba(217,185,46,.2);outline:none}
+#fps{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:12px;z-index:4;font:600 13px ui-monospace,monospace;color:#bfe3d4;background:rgba(6,10,13,.55);padding:4px 8px;border-radius:4px;pointer-events:none}
+#menuBtn{position:fixed;left:12px;top:50%;transform:translateY(-50%);z-index:4;margin:0;padding:12px 14px;font:600 14px system-ui,sans-serif;border-radius:10px;background:rgba(6,10,13,.6);border:1.5px solid var(--acc);color:var(--ink);cursor:pointer}
+#menu{position:fixed;inset:0;z-index:5;display:none;align-items:center;justify-content:center;background:rgba(4,8,11,.45)}
+#menu.on{display:flex}
+#menu .mp{width:min(340px,88vw);background:rgba(7,12,15,.94);border:1.5px solid var(--acc);border-radius:12px;padding:20px 22px 18px;box-shadow:0 12px 50px rgba(0,0,0,.6)}
+#menu b{display:block;font:600 15px system-ui;letter-spacing:.22em;color:var(--acc);margin-bottom:6px}
+.tgl{display:flex;justify-content:space-between;align-items:center;padding:11px 2px;border-bottom:1px solid rgba(217,185,46,.14);font-size:15px;cursor:pointer}
+.tgl input{display:none}
+.tgl i{width:40px;height:22px;border-radius:11px;background:#202b2b;border:1px solid #3a4a48;position:relative;transition:background .25s;flex:none}
+.tgl i::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#8aa39a;transition:all .25s}
+.tgl input:checked+i{background:rgba(217,185,46,.35);border-color:var(--acc)}
+.tgl input:checked+i::after{left:20px;background:var(--acc)}
+.rng{display:block;padding:12px 2px 4px;font-size:14px;color:var(--dim)}
+.rng input{width:100%;margin-top:8px;accent-color:var(--acc)}
+#mClose{width:100%;margin-top:16px;padding:11px;font-size:15px}
+#fsBtn{position:fixed;right:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:4;margin:0;padding:6px 12px;font:600 20px/1 system-ui,sans-serif;border-radius:10px;background:rgba(6,10,13,.6);border:1.5px solid var(--acc);color:var(--ink);cursor:pointer}
+#ld{position:fixed;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#060a0d;transition:opacity .8s}
+#ld.off{opacity:0;pointer-events:none}
+#ld b{font:600 clamp(40px,10vw,90px)/1 "Noto Serif TC","Songti TC",serif;letter-spacing:.14em;text-shadow:0 0 24px rgba(217,185,46,.5)}
+#ld .bar{width:min(320px,70vw);height:4px;background:#22302f;margin-top:30px;border-radius:2px;overflow:hidden}
+#ldb{display:block;height:100%;width:2%;background:var(--acc);transition:width .25s}
+#ldp{margin-top:14px;font-size:14px}
+@media (prefers-reduced-motion:reduce){#ui,#hint{transition:none}body::before{animation:none}}
+</style></head><body>
+<div id="ld"><b>九龍城寨</b><div class="bar"><i id="ldb"></i></div><p id="ldp">Загрузка…</p></div>
+<div id="ui"><h1>九龍城寨</h1>
+<p>Тихая прогулка по ночному городу под дождём. Ничего делать не нужно: просто иди, слушай и смотри по сторонам.</p>
+<p>WASD — идти, мышь — смотреть, Shift — быстрее, M — звук, L — фонарик, F — полный экран. В переулках есть лестницы в подвалы: внизу темно, там вы автоматически берёте фонарик. На телефоне: левая половина экрана двигает, правая поворачивает.</p>
+<button id="go">Войти в город</button></div>
+<div id="hint">M — звук, R — дождь, L — фонарик, F — полный экран, Esc — меню</div><div id="fps">-- FPS</div><button id="menuBtn">☰ Меню</button><button id="fsBtn" title="Полный экран (F)">⛶</button>
+<div id="menu"><div class="mp"><b>МЕНЮ</b>
+<label class="tgl"><span>Дождь</span><input type="checkbox" id="mRain" checked><i></i></label>
+<label class="tgl"><span>Туман</span><input type="checkbox" id="mFog" checked><i></i></label>
+<label class="tgl"><span>Звуки города</span><input type="checkbox" id="mSnd" checked><i></i></label>
+<label class="tgl"><span>Фонарик</span><input type="checkbox" id="mFl"><i></i></label>
+<label class="rng"><span>Плотность тумана</span><input type="range" id="mFd" min="0" max="100" value="45"></label>
+<button id="mClose">Продолжить прогулку</button>
+</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+
+(async () => {
+  const T = THREE,
+    P = 17,
+    S = 5,
+    G = 7,
+    FOGC = 0x0f191d,
+    R = Math.random,
+    coarse = matchMedia('(pointer:coarse)').matches;
+  let sd = 11;
+  const rnd = () => (sd = sd * 16807 % 2147483647) / 2147483647,
+    pick = a => a[rnd() * a.length | 0];
+  const renderer = new T.WebGLRenderer({
+    antialias: true,
+    powerPreference: 'high-performance'
+  });
+  renderer.toneMapping = T.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.16;
+  const cvs = renderer.domElement;
+  document.body.prepend(cvs);
+  const scene = new T.Scene();
+  scene.background = new T.Color(FOGC);
+  scene.fog = new T.Fog(FOGC, 2.2, 50);
+  const cam = new T.PerspectiveCamera(72, innerWidth / innerHeight, .1, 66);
+  cam.rotation.order = 'YXZ';
+  const hemi = new T.HemisphereLight(0x5d7480, 0x1a1410, .5);
+  scene.add(hemi);
+  const dl = new T.DirectionalLight(0x9db4c4, .2);
+  dl.position.set(-1, 2, .6);
+  scene.add(dl);
+  const lamp = new T.PointLight(0xffb070, 1, 16);
+  scene.add(lamp);
+  {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d'),
+      d = g.createImageData(128, 128);
+    for (let i = 0; i < d.data.length; i += 4) {
+      d.data[i] = d.data[i + 1] = d.data[i + 2] = R() * 255;
+      d.data[i + 3] = 255
+    }
+    g.putImageData(d, 0, 0);
+    document.documentElement.style.setProperty('--grain', `url(${c.toDataURL()})`)
+  }
+
+  const cv = (w, h, f) => {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    f(c.getContext('2d'), w, h);
+    const t = new T.CanvasTexture(c);
+    t.wrapS = t.wrapT = T.RepeatWrapping;
+    t.anisotropy = 4;
+    return t
+  };
+  const FNT = '"Noto Sans TC","Microsoft JhengHei","PingFang TC","Hiragino Sans",sans-serif';
+
+  function facade(base, rs) {
+    let q = rs;
+    const r = () => (q = q * 16807 % 2147483647) / 2147483647;
+    const W = [];
+    for (let i = 0; i < 16; i++) {
+      const u = r();
+      W.push({
+        k: u < .5 ? 0 : u < .75 ? 1 : u < .93 ? 2 : 3,
+        cage: r() < .4,
+        ac: r() < .22,
+        wash: r() < .15,
+        post: r() < .18,
+        tile: r() < .1
+      })
+    }
+    const draw = e => cv(512, 512, g => {
+      g.fillStyle = e ? '#000' : base;
+      g.fillRect(0, 0, 512, 512);
+      if (!e) {
+        for (let i = 0; i < 2400; i++) {
+          g.fillStyle = `rgba(${R()<.5?0:200},${R()<.5?0:200},${R()<.5?0:190},${R()*.05})`;
+          g.fillRect(R() * 512, R() * 512, R() * 8 + 1, R() * 8 + 1)
+        }
+        for (let i = 0; i < 45; i++) {
+          const x = R() * 512,
+            y = R() * 512,
+            gr = g.createLinearGradient(0, y, 0, y + 170);
+          gr.addColorStop(0, `rgba(10,14,12,${.12+R()*.2})`);
+          gr.addColorStop(1, 'rgba(10,14,12,0)');
+          g.fillStyle = gr;
+          g.fillRect(x, y, 3 + R() * 14, 170)
+        }
+        for (let i = 0; i < 12; i++) {
+          const x = R() * 512,
+            y = R() * 512,
+            rr = 20 + R() * 50,
+            gr = g.createRadialGradient(x, y, 2, x, y, rr);
+          gr.addColorStop(0, i < 8 ? 'rgba(18,40,24,.4)' : 'rgba(120,70,30,.3)');
+          gr.addColorStop(1, 'rgba(0,0,0,0)');
+          g.fillStyle = gr;
+          g.fillRect(x - rr, y - rr, rr * 2, rr * 2)
+        }
+        g.font = `700 64px ${FNT}`;
+        g.textAlign = 'center';
+        g.fillStyle = 'rgba(205,190,140,.1)';
+        for (let i = 0; i < 3; i++) g.fillText('藥茶酒電旅' [R() * 5 | 0], 40 + R() * 430, 60 + R() * 400);
+        for (let i = 0; i < 3; i++) {
+          g.fillStyle = '#262b29';
+          g.fillRect(R() * 500, 0, 4 + R() * 3, 512)
+        }
+      }
+      W.forEach((w, i) => {
+        const x = i % 4 * 128,
+          y = (i >> 2) * 128,
+          wx = x + 18,
+          wy = y + 24,
+          ww = 84,
+          wh = 62;
+        if (e) {
+          if (w.k) {
+            g.fillStyle = ['', '#e8c27e', '#d6efdd', '#7ea6d0'][w.k];
+            g.globalAlpha = .55 + R() * .3;
+            g.fillRect(wx, wy, ww, wh);
+            g.globalAlpha = 1;
+            g.fillStyle = 'rgba(0,0,0,.5)';
+            g.fillRect(wx, wy, ww * (.15 + R() * .35), wh);
+            g.fillStyle = 'rgba(0,0,0,.55)';
+            g.fillRect(wx + ww / 2 - 1.5, wy, 3, wh);
+            if (R() < .3) {
+              g.fillStyle = 'rgba(255,255,255,.3)';
+              g.fillRect(wx + ww * .55, wy + 6, ww * .35, wh * .3)
+            }
+          }
+        } else {
+          if (w.tile) {
+            g.fillStyle = '#8a9a90';
+            g.fillRect(x + 4, y + 4, 120, 112);
+            g.strokeStyle = 'rgba(0,0,0,.25)';
+            for (let a = 0; a < 120; a += 10) {
+              g.strokeRect(x + 4 + a, y + 4, 10, 112)
+            }
+          }
+          g.fillStyle = '#6a726e';
+          g.fillRect(wx - 3, wy - 3, ww + 6, wh + 6);
+          const gr = g.createLinearGradient(wx, wy, wx + ww, wy + wh);
+          gr.addColorStop(0, w.k ? '#3a3a30' : '#1d2d35');
+          gr.addColorStop(1, '#0a1216');
+          g.fillStyle = gr;
+          g.fillRect(wx, wy, ww, wh);
+          g.fillStyle = 'rgba(255,255,255,.07)';
+          g.beginPath();
+          g.moveTo(wx, wy + wh);
+          g.lineTo(wx + 30, wy);
+          g.lineTo(wx + 46, wy);
+          g.lineTo(wx + 16, wy + wh);
+          g.fill();
+          g.fillStyle = '#6a726e';
+          g.fillRect(wx + ww / 2 - 1.5, wy, 3, wh);
+          if (w.cage) {
+            g.strokeStyle = '#1c211f';
+            g.lineWidth = 2.5;
+            g.strokeRect(wx - 6, wy - 6, ww + 12, wh + 12);
+            for (let k = 1; k < 6; k++) {
+              g.beginPath();
+              g.moveTo(wx - 6 + k * 15, wy - 6);
+              g.lineTo(wx - 6 + k * 15, wy + wh + 6);
+              g.stroke()
+            }
+            for (let k = 1; k < 4; k++) {
+              g.beginPath();
+              g.moveTo(wx - 6, wy - 6 + k * 20);
+              g.lineTo(wx + ww + 6, wy - 6 + k * 20);
+              g.stroke()
+            }
+          }
+          if (w.ac) {
+            g.fillStyle = '#aab0aa';
+            g.fillRect(x + 30, y + 90, 56, 26);
+            g.fillStyle = '#555a56';
+            g.beginPath();
+            g.arc(x + 46, y + 103, 9, 0, 7);
+            g.fill();
+            g.fillStyle = 'rgba(0,0,0,.25)';
+            g.fillRect(x + 60, y + 116, 3, 12)
+          }
+          if (w.wash) {
+            for (let k = 0; k < 3; k++) {
+              g.fillStyle = ['#c8472f', '#3a6fb0', '#d8d8d0'][k];
+              g.fillRect(wx + 6 + k * 26, wy - 2, 16, 26)
+            }
+          }
+          if (w.post) {
+            g.fillStyle = '#d8d4c0';
+            g.fillRect(x + 100, y + 30, 18, 28);
+            g.fillStyle = 'rgba(120,30,30,.7)';
+            g.fillRect(x + 103, y + 34, 12, 3);
+            g.fillRect(x + 103, y + 42, 12, 2)
+          }
+          g.fillStyle = '#8c928c';
+          g.fillRect(wx - 8, wy + wh + 3, ww + 16, 5);
+          g.fillStyle = 'rgba(0,0,0,.45)';
+          g.fillRect(wx - 8, wy + wh + 8, ww + 16, 3);
+          g.fillStyle = '#4b504c';
+          g.fillRect(wx - 6, wy - 9, ww + 12, 5);
+          for (let k = 0; k < 3; k++) {
+            g.fillStyle = `rgba(${90+R()*40|0},45,20,${.15+R()*.2})`;
+            g.fillRect(wx + R() * ww, wy + wh + 8, 1.5 + R() * 2, 10 + R() * 30)
+          }
+          if (!w.cage && R() < .35) {
+            g.fillStyle = 'rgba(30,70,45,.9)';
+            g.fillRect(wx + 6, wy + wh - 8, 18, 8);
+            for (let k = 0; k < 5; k++) {
+              g.beginPath();
+              g.arc(wx + 8 + k * 3.5, wy + wh - 11, 4, 0, 7);
+              g.fill()
+            }
+          }
+          if (w.k && R() < .5) {
+            g.fillStyle = 'rgba(150,40,40,.35)';
+            g.fillRect(wx, wy, ww * .3, wh)
+          }
+          g.fillStyle = 'rgba(0,0,0,.3)';
+          g.fillRect(x, y + 120, 128, 8);
+          g.fillStyle = 'rgba(255,255,255,.05)';
+          g.fillRect(x, y + 118, 128, 2)
+        }
+      });
+      if (!e)
+        for (let i = 0; i < 6; i++) {
+          g.strokeStyle = 'rgba(8,10,9,.85)';
+          g.lineWidth = 1.5 + R() * 2;
+          const y = R() * 512;
+          g.beginPath();
+          g.moveTo(0, y);
+          g.bezierCurveTo(150, y + R() * 30 - 15, 350, y + R() * 30 - 15, 512, y);
+          g.stroke()
+        }
+    });
+    return [draw(0), draw(1)];
+  }
+  const fm = (b, s) => {
+    const m = facade(b, s);
+    return new T.MeshStandardMaterial({
+      map: m[0],
+      bumpMap: m[0],
+      bumpScale: 1.5,
+      emissiveMap: m[1],
+      emissive: 0xffffff,
+      emissiveIntensity: .8,
+      roughness: .58,
+      metalness: .06,
+      vertexColors: true
+    })
+  };
+  const FM = [fm('#58605a', 3), fm('#6b665a', 5), fm('#4d5a60', 9), fm('#5a4a46', 13), fm('#4a5a4e', 17),
+    fm('#58546a', 21)
+  ];
+  const HS = [
+      ['#e9eadf', '#c4231c', '龍城茶餐廳'],
+      ['#d9b92e', '#16130a', '24H 便利店'],
+      ['#b02a22', '#f1ece0', '旅館 HOTEL'],
+      ['#2f7a52', '#eef2e8', '藥房 PHARMACY'],
+      ['#274a86', '#eef0f2', '麵家 RAMEN'],
+      ['#e4e2d6', '#17201a', '按摩 MASSAGE'],
+      ['#efe6c8', '#8a1d18', '找換店'],
+      ['#101216', '#ff3d9a', '牙科診所']
+    ],
+    VS = [
+      ['#d9b92e', '#16130a', '大排檔'],
+      ['#b02a22', '#f1ece0', '旅館'],
+      ['#e9eadf', '#c4231c', '麻雀館'],
+      ['#2f7a52', '#eef2e8', '醫務所'],
+      ['#efe6c8', '#8a1d18', '茶樓'],
+      ['#274a86', '#eef0f2', '按摩'],
+      ['#e4e2d6', '#17201a', '海鮮'],
+      ['#b02a22', '#f1ece0', '電器'],
+      ['#d9b92e', '#16130a', '金舖'],
+      ['#e9eadf', '#2f7a52', '藥']
+    ];
+  const sign = (g, x, y, w, h, [bg, fg, t], v) => {
+    g.fillStyle = bg;
+    g.fillRect(x, y, w, h);
+    for (let i = 0; i < 30; i++) {
+      g.fillStyle = `rgba(20,15,10,${R()*.12})`;
+      g.fillRect(x + R() * w, y, 1 + R() * 3, h * (.3 + R() * .7))
+    }
+    g.strokeStyle = fg;
+    g.lineWidth = 3;
+    g.strokeRect(x + 5, y + 5, w - 10, h - 10);
+    g.fillStyle = fg;
+    if (v) {
+      g.font = `700 54px ${FNT}`;
+      const st = Math.min(72, 232 / t.length);
+      [...t].forEach((c, i) => g.fillText(c, x + w / 2, y + 14 + st * (i + .5)))
+    } else {
+      let s = 46;
+      do {
+        g.font = `700 ${s}px ${FNT}`;
+        s -= 2
+      } while (g.measureText(t).width > w - 30 && s > 14);
+      g.fillText(t, x + w / 2, y + h / 2 + 3)
+    }
+    const gr = g.createLinearGradient(0, y, 0, y + h);
+    gr.addColorStop(0, 'rgba(0,0,0,.3)');
+    gr.addColorStop(1, 'rgba(0,0,0,.05)');
+    g.fillStyle = gr;
+    g.fillRect(x, y, w, h)
+  };
+  const atlas = cv(1024, 512, g => {
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    HS.forEach((s, i) => sign(g, i % 4 * 256, (i >> 2) * 96, 256, 96, s, 0));
+    VS.forEach((s, j) => sign(g, j * 96, 256, 96, 256, s, 1))
+  });
+  const glowT = cv(64, 64, g => {
+    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, '#fff');
+    r.addColorStop(.35, 'rgba(255,255,255,.35)');
+    r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r;
+    g.fillRect(0, 0, 64, 64)
+  });
+  const shT = cv(128, 128, g => {
+    g.fillStyle = '#707470';
+    g.fillRect(0, 0, 128, 128);
+    for (let y = 0; y < 128; y += 6) {
+      g.fillStyle = 'rgba(0,0,0,.35)';
+      g.fillRect(0, y, 128, 2);
+      g.fillStyle = 'rgba(255,255,255,.06)';
+      g.fillRect(0, y + 2, 128, 1)
+    }
+    for (let i = 0; i < 40; i++) {
+      g.fillStyle = `rgba(${100+R()*40|0},55,25,${R()*.25})`;
+      g.fillRect(R() * 128, R() * 128, R() * 3 + 1, R() * 50)
+    }
+  });
+  const dT = cv(128, 128, g => {
+    g.fillStyle = '#e6e6e6';
+    g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 500; i++) {
+      g.fillStyle = `rgba(${R()<.5?0:255},${R()<.5?0:255},${R()<.5?0:255},${R()*.08})`;
+      g.fillRect(R() * 128, R() * 128, R() * 4 + 1, R() * 4 + 1)
+    }
+    for (let i = 0; i < 14; i++) {
+      const gr = g.createLinearGradient(0, 0, 0, 128);
+      gr.addColorStop(0, 'rgba(40,30,20,0)');
+      gr.addColorStop(1, `rgba(40,30,20,${.1+R()*.2})`);
+      g.fillStyle = gr;
+      g.fillRect(R() * 128, 0, 1 + R() * 3, 128)
+    }
+    g.fillStyle = 'rgba(0,0,0,.16)';
+    g.fillRect(0, 0, 10, 128);
+    g.fillRect(118, 0, 10, 128);
+    g.fillRect(0, 0, 128, 10);
+    g.fillRect(0, 118, 128, 10);
+    for (let i = 0; i < 5; i++) {
+      g.fillStyle = 'rgba(150,70,20,.22)';
+      g.beginPath();
+      g.arc(R() * 128, R() * 128, 4 + R() * 12, 0, 7);
+      g.fill()
+    }
+  });
+  const glT = cv(128, 128, g => {
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 3; i++) {
+      const x = R() * 100;
+      g.fillStyle = `rgba(150,190,210,${.05+R()*.06})`;
+      g.beginPath();
+      g.moveTo(x, 128);
+      g.lineTo(x + 20, 128);
+      g.lineTo(x + 60, 0);
+      g.lineTo(x + 40, 0);
+      g.fill()
+    }
+    for (let i = 0; i < 70; i++) {
+      const x = R() * 128,
+        y = R() * 128,
+        r = .8 + R() * 2.2;
+      g.fillStyle = `rgba(190,225,240,${.25+R()*.4})`;
+      g.beginPath();
+      g.ellipse(x, y, r * .8, r * 1.3, 0, 0, 7);
+      g.fill();
+      if (R() < .3) {
+        g.fillStyle = 'rgba(170,210,230,.18)';
+        g.fillRect(x - .5, y, 1, 10 + R() * 30)
+      }
+    }
+  });
+  const awT = cv(128, 96, g => {
+    [
+      ['#c4231c', '#e8e4d4'],
+      ['#2f7a52', '#e8e4d4'],
+      ['#274a86', '#e8e4d4']
+    ].forEach(([a, b], j) => {
+      for (let i = 0; i < 8; i++) {
+        g.fillStyle = i % 2 ? b : a;
+        g.fillRect(i * 16, j * 32, 16, 32)
+      }
+    });
+    for (let i = 0; i < 200; i++) {
+      g.fillStyle = `rgba(0,0,0,${R()*.12})`;
+      g.fillRect(R() * 128, R() * 96, 2, R() * 8)
+    }
+  });
+  const ringT = cv(64, 64, g => {
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, 64, 64);
+    g.strokeStyle = '#fff';
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.arc(32, 32, 27, 0, 7);
+    g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.4)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.arc(32, 32, 18, 0, 7);
+    g.stroke()
+  });
+
+  const cbT = cv(128, 128, g => {
+    g.fillStyle = '#b08a5a';
+    g.fillRect(0, 0, 128, 128);
+    for (let y = 0; y < 128; y += 3) {
+      g.fillStyle = `rgba(60,35,10,${.06+R()*.06})`;
+      g.fillRect(0, y, 128, 1)
+    }
+    for (let i = 0; i < 260; i++) {
+      g.fillStyle = `rgba(${R()<.5?255:60},${R()<.5?220:40},${R()<.5?170:20},${R()*.07})`;
+      g.fillRect(R() * 128, R() * 128, R() * 5 + 1, R() * 3 + 1)
+    }
+    g.fillStyle = 'rgba(222,205,160,.85)';
+    g.fillRect(54, 0, 20, 128);
+    g.fillStyle = 'rgba(255,255,255,.8)';
+    g.fillRect(10, 70, 36, 26);
+    g.fillStyle = '#222';
+    g.fillRect(14, 76, 28, 2);
+    g.fillRect(14, 82, 20, 2);
+    g.fillRect(14, 88, 24, 2);
+    g.fillStyle = 'rgba(30,50,160,.7)';
+    g.font = '700 16px sans-serif';
+    g.fillText('易碎', 84, 40);
+    for (let i = 0; i < 3; i++) {
+      g.fillStyle = 'rgba(50,30,15,.25)';
+      g.beginPath();
+      g.arc(R() * 128, R() * 128, 8 + R() * 14, 0, 7);
+      g.fill()
+    }
+  });
+  const wdT = cv(128, 128, g => {
+    g.fillStyle = '#8a6a42';
+    g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 90; i++) {
+      g.fillStyle = `rgba(${R()<.5?40:200},${R()<.5?25:150},10,${R()*.12})`;
+      g.fillRect(0, R() * 128, 128, 1 + R() * 2)
+    }
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = 'rgba(30,18,8,.55)';
+      g.beginPath();
+      g.ellipse(R() * 128, R() * 128, 2 + R() * 3, 1 + R() * 2, 0, 0, 7);
+      g.fill()
+    }
+  });
+  const rsT = cv(128, 128, g => {
+    g.fillStyle = '#5a4a40';
+    g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 400; i++) {
+      g.fillStyle = `rgba(${120+R()*60|0},${50+R()*30|0},20,${R()*.18})`;
+      g.fillRect(R() * 128, R() * 128, R() * 6 + 1, R() * 6 + 1)
+    }
+    for (let y = 18; y < 128; y += 36) {
+      g.fillStyle = 'rgba(0,0,0,.4)';
+      g.fillRect(0, y, 128, 3);
+      g.fillStyle = 'rgba(255,255,255,.1)';
+      g.fillRect(0, y + 3, 128, 1)
+    }
+    for (let i = 0; i < 20; i++) {
+      g.fillStyle = 'rgba(110,50,20,.3)';
+      g.fillRect(R() * 128, 0, 2, 20 + R() * 90)
+    }
+  });
+  const crT = cv(128, 128, g => {
+    g.fillStyle = '#808080';
+    g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 260; i++) {
+      g.strokeStyle = `rgba(${R()<.5?255:0},${R()<.5?255:0},${R()<.5?255:0},.25)`;
+      g.lineWidth = 1 + R() * 2;
+      g.beginPath();
+      const x = R() * 128,
+        y = R() * 128;
+      g.moveTo(x, y);
+      g.lineTo(x + R() * 30 - 15, y + R() * 30 - 15);
+      g.stroke()
+    }
+  });
+  // === PATCH A: реалистичный асфальт — цвет, шероховатость (лужи), ночной envMap ===
+  const aT = cv(1024, 1024, g => {
+    g.fillStyle = '#191c1f';
+    g.fillRect(0, 0, 1024, 1024);
+    for (let i = 0; i < 9000; i++) {
+      const v = 14 + R() * 36 | 0;
+      g.fillStyle = `rgba(${v},${v + 2},${v + 4},${.14 + R() * .2})`;
+      g.fillRect(R() * 1024, R() * 1024, 1 + R() * 2.2, 1 + R() * 2.2)
+    }
+    for (let i = 0; i < 26; i++) {
+      const x = R() * 1024, y = R() * 1024, rr = 30 + R() * 130,
+        gr = g.createRadialGradient(x, y, 4, x, y, rr);
+      gr.addColorStop(0, `rgba(${8 + R() * 10 | 0},${10 + R() * 10 | 0},${12 + R() * 10 | 0},${.12 + R() * .2})`);
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr;
+      g.fillRect(x - rr, y - rr, rr * 2, rr * 2)
+    }
+    for (let i = 0; i < 7; i++) {
+      const x = R() * 900, y = R() * 900, w = 60 + R() * 130, h = 40 + R() * 90;
+      g.fillStyle = `rgba(${22 + R() * 12 | 0},${24 + R() * 12 | 0},${26 + R() * 12 | 0},.55)`;
+      g.fillRect(x, y, w, h);
+      g.strokeStyle = 'rgba(6,7,8,.7)';
+      g.lineWidth = 2 + R() * 2;
+      g.strokeRect(x, y, w, h)
+    }
+    for (let i = 0; i < 26; i++) {
+      let x = R() * 1024, y = R() * 1024, a = R() * 6.28;
+      g.strokeStyle = 'rgba(7,8,10,.85)';
+      g.lineWidth = .8 + R() * 1.6;
+      g.beginPath();
+      g.moveTo(x, y);
+      for (let s = 0; s < 14; s++) {
+        a += (R() - .5) * 1.1;
+        x += Math.cos(a) * (6 + R() * 16);
+        y += Math.sin(a) * (6 + R() * 16);
+        g.lineTo(x, y)
+      }
+      g.stroke()
+    }
+    for (let i = 0; i < 5; i++) {
+      const x = R() * 1024, y = R() * 1024, rr = 18 + R() * 42,
+        gr = g.createRadialGradient(x, y, 2, x, y, rr);
+      gr.addColorStop(0, 'rgba(5,6,8,.75)');
+      gr.addColorStop(.8, 'rgba(8,10,13,.35)');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr;
+      g.beginPath();
+      g.ellipse(x, y, rr, rr * .7, R() * 3, 0, 7);
+      g.fill()
+    }
+    g.fillStyle = 'rgba(180,175,150,.13)';
+    for (let i = 0; i < 3; i++) g.fillRect(R() * 300, 100 + R() * 800, 90 + R() * 120, 7)
+  });
+  const arT = cv(512, 512, g => {
+    g.fillStyle = '#e2e2e2';
+    g.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 1600; i++) {
+      const v = 200 + R() * 55 | 0;
+      g.fillStyle = `rgba(${v},${v},${v},.3)`;
+      g.fillRect(R() * 512, R() * 512, 2 + R() * 3, 2 + R() * 3)
+    }
+    for (let i = 0; i < 16; i++) {
+      const x = R() * 512, y = R() * 512;
+      g.fillStyle = 'rgba(18,18,20,.9)';
+      for (let b = 0; b < 7; b++) {
+        g.beginPath();
+        g.ellipse(x + (R() - .5) * 60, y + (R() - .5) * 44, 10 + R() * 26, 8 + R() * 20, R() * 3, 0, 7);
+        g.fill()
+      }
+    }
+  });
+  const envT = cv(256, 128, g => {
+    const gr = g.createLinearGradient(0, 0, 0, 128);
+    gr.addColorStop(0, '#232c33');
+    gr.addColorStop(.55, '#0d1116');
+    gr.addColorStop(1, '#05070a');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 256, 128);
+    [['#ff4a6a', .5], ['#38e0c0', .8], ['#ffc23a', .3], ['#6a5aff', .65], ['#ff8a3a', .9], ['#3ab0ff', .4]].forEach(([c, py]) => {
+      g.fillStyle = c;
+      g.globalAlpha = .5;
+      try { g.filter = 'blur(6px)' } catch (e) {}
+      g.fillRect(R() * 256, 128 * py - 8, 14 + R() * 26, 5 + R() * 7);
+      g.globalAlpha = 1;
+      try { g.filter = 'none' } catch (e) {}
+    })
+  });
+  envT.mapping = T.EquirectangularReflectionMapping;
+  // === PATCH B: рифлёный металл навесов, бетон подвалов, атлас граффити, крышный неон, указатели ===
+  const cmT = cv(256, 256, g => {
+    g.fillStyle = '#6d7175';
+    g.fillRect(0, 0, 256, 256);
+    for (let x = 0; x < 256; x += 16) {
+      const gr = g.createLinearGradient(x, 0, x + 16, 0);
+      gr.addColorStop(0, 'rgba(0,0,0,.42)');
+      gr.addColorStop(.35, 'rgba(255,255,255,.16)');
+      gr.addColorStop(.6, 'rgba(0,0,0,.05)');
+      gr.addColorStop(1, 'rgba(0,0,0,.45)');
+      g.fillStyle = gr;
+      g.fillRect(x, 0, 16, 256)
+    }
+    for (let i = 0; i < 40; i++) {
+      g.fillStyle = `rgba(${110 + R() * 60 | 0},${52 + R() * 26 | 0},18,${.1 + R() * .3})`;
+      g.fillRect(R() * 256, R() * 200, 2 + R() * 5, 20 + R() * 60)
+    }
+    for (let i = 0; i < 120; i++) {
+      g.fillStyle = `rgba(10,12,12,${R() * .2})`;
+      g.fillRect(R() * 256, R() * 256, 3 + R() * 9, 1 + R() * 3)
+    }
+  });
+  const concT = cv(256, 256, g => {
+    g.fillStyle = '#43464a';
+    g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 2400; i++) {
+      const v = 44 + R() * 34 | 0;
+      g.fillStyle = `rgba(${v},${v + 2},${v + 4},${.2 + R() * .25})`;
+      g.fillRect(R() * 256, R() * 256, 1 + R() * 2, 1 + R() * 2)
+    }
+    for (let y = 63; y < 256; y += 64) {
+      g.fillStyle = 'rgba(12,13,14,.55)';
+      g.fillRect(0, y, 256, 2);
+      g.fillStyle = 'rgba(255,255,255,.07)';
+      g.fillRect(0, y + 2, 256, 1)
+    }
+    for (let i = 0; i < 14; i++) {
+      const x = R() * 256, gr = g.createLinearGradient(0, 0, 0, 256);
+      gr.addColorStop(0, `rgba(16,18,16,${.12 + R() * .22})`);
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr;
+      g.fillRect(x, R() * 60, 3 + R() * 9, 130 + R() * 120)
+    }
+    for (let i = 0; i < 5; i++) {
+      g.fillStyle = 'rgba(212,210,200,.16)';
+      g.beginPath();
+      g.arc(R() * 256, R() * 256, 8 + R() * 22, 0, 7);
+      g.fill()
+    }
+    for (let y = 32; y < 256; y += 64) for (let x = 32; x < 256; x += 96) {
+      g.fillStyle = 'rgba(10,11,12,.5)';
+      g.beginPath();
+      g.arc(x, y, 3, 0, 7);
+      g.fill()
+    }
+  });
+  const gf2T = cv(1024, 512, g => {
+    const cols = ['#ff3d5a', '#38e0c0', '#ffd23a', '#7a5aff', '#ff8a3a', '#58ff6a', '#ff5ad9'];
+    const drips = (x, y, c) => {
+      g.fillStyle = c;
+      for (let i = 0; i < 4; i++) g.fillRect(x + (R() - .5) * 90, y, 2.5, 8 + R() * 26)
+    };
+    const tag = (cx, cy, txt) => {
+      const c1 = cols[R() * 7 | 0];
+      g.save();
+      g.translate(cx, cy);
+      g.rotate((R() - .5) * .3);
+      g.font = `900 italic ${64 + R() * 26 | 0}px ${FNT}`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.lineJoin = 'round';
+      g.shadowColor = c1;
+      g.shadowBlur = 14;
+      g.lineWidth = 10;
+      g.strokeStyle = 'rgba(8,8,10,.9)';
+      g.strokeText(txt, 0, 0);
+      g.fillStyle = c1;
+      g.fillText(txt, 0, 0);
+      g.shadowBlur = 0;
+      drips(0, 34, c1);
+      g.restore()
+    };
+    const stencil = (cx, cy) => {
+      g.save();
+      g.translate(cx, cy);
+      g.rotate((R() - .5) * .2);
+      g.fillStyle = 'rgba(225,222,210,.92)';
+      const k = R() * 4 | 0;
+      if (k == 0) {
+        g.beginPath();
+        g.moveTo(-52, 8);
+        g.lineTo(18, 8);
+        g.lineTo(18, -14);
+        g.lineTo(54, 6);
+        g.lineTo(18, 26);
+        g.lineTo(18, 20);
+        g.lineTo(-52, 20);
+        g.closePath();
+        g.fill()
+      } else if (k == 1) {
+        g.beginPath();
+        g.ellipse(0, 0, 46, 20, 0, 0, 7);
+        g.fill();
+        g.fillStyle = '#111';
+        g.beginPath();
+        g.arc(0, 0, 11, 0, 7);
+        g.fill()
+      } else if (k == 2) {
+        g.beginPath();
+        g.moveTo(-40, 26);
+        g.lineTo(-40, -6);
+        g.lineTo(-20, -6);
+        g.lineTo(-10, -26);
+        g.lineTo(2, -6);
+        g.lineTo(40, -6);
+        g.lineTo(40, 26);
+        g.closePath();
+        g.fill();
+        g.fillRect(-40, 26, 80, 5)
+      } else {
+        g.beginPath();
+        g.moveTo(-8, -30);
+        g.lineTo(16, -30);
+        g.lineTo(2, -4);
+        g.lineTo(20, -4);
+        g.lineTo(-14, 32);
+        g.lineTo(-2, 2);
+        g.lineTo(-18, 2);
+        g.closePath();
+        g.fill()
+      }
+      g.restore()
+    };
+    const sticker = (cx, cy) => {
+      g.save();
+      g.translate(cx, cy);
+      g.rotate((R() - .5) * .5);
+      g.fillStyle = '#ded9c8';
+      g.fillRect(-34, -22, 68, 44);
+      g.fillStyle = cols[R() * 7 | 0];
+      g.fillRect(-30, -18, 60, 36);
+      g.fillStyle = '#101014';
+      g.font = `900 20px ${FNT}`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(pick(['KWC', '404', '夜', 'NOPE', '九龍']), 0, 1);
+      g.fillStyle = 'rgba(0,0,0,.35)';
+      g.beginPath();
+      g.moveTo(34, -22);
+      g.lineTo(34, 22);
+      g.lineTo(20, 22);
+      g.closePath();
+      g.fill();
+      g.restore()
+    };
+    const throw2 = (cx, cy) => {
+      const c1 = cols[R() * 7 | 0];
+      g.save();
+      g.translate(cx, cy);
+      g.rotate((R() - .5) * .24);
+      g.fillStyle = 'rgba(10,10,14,.25)';
+      g.beginPath();
+      g.ellipse(0, 4, 96, 40, 0, 0, 7);
+      g.fill();
+      g.fillStyle = c1;
+      g.globalAlpha = .85;
+      g.beginPath();
+      g.ellipse(0, 0, 88, 34, 0, 0, 7);
+      g.fill();
+      g.globalAlpha = 1;
+      g.fillStyle = '#0c0c10';
+      g.font = `900 46px ${FNT}`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(pick(['ОЙ', 'ВЫХОД', '龍', 'SMOG', '9龙']), 0, 2);
+      g.restore()
+    };
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) {
+      const cx = i * 256 + 128, cy = j * 256 + 128, k = (i + j * 4) % 4;
+      if (k == 0) tag(cx, cy, pick(['РОСТ', 'КИН', 'ДЫМ', 'ZEX', 'НОЧЬ', 'ТУМАН']));
+      else if (k == 1) stencil(cx, cy);
+      else if (k == 2) {
+        sticker(cx - 60, cy + 30);
+        tag(cx + 40, cy - 30, pick(['КЛУБ', 'ЭХО', 'WET']))
+      } else throw2(cx, cy)
+    }
+  });
+  const RTX = [
+    ['БАР', '#ff3d5a'], ['КАФЕ', '#38e0c0'], ['ОТЕЛЬ', '#ff8a3a'], ['ЛОМБАРД', '#ffd23a'],
+    ['КИНО', '#7a5aff'], ['ОТКРЫТО', '#58ff6a'], ['ПИЦЦА', '#ff5ad9'], ['САУНА', '#3ab0ff'],
+    ['夜市', '#ff4a6a'], ['酒場', '#38e0c0'], ['旅館', '#ffd23a'], ['藥房', '#58ff6a'],
+    ['理髮', '#ff8a3a'], ['караоке', '#ff5ad9'], ['МОТЕЛЬ', '#3ab0ff'], ['夜', '#7a5aff']
+  ];
+  const rtT = cv(1024, 512, g => {
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    RTX.forEach(([tx, c], i) => {
+      const x = (i % 4) * 256, y = (i >> 2) * 128;
+      g.fillStyle = '#0b0d10';
+      g.fillRect(x + 4, y + 4, 248, 120);
+      g.strokeStyle = c;
+      g.shadowColor = c;
+      g.shadowBlur = 10;
+      g.lineWidth = 4;
+      g.strokeRect(x + 14, y + 12, 228, 104);
+      let s = 64;
+      do {
+        g.font = `700 ${s}px ${FNT}`;
+        s -= 3
+      } while (g.measureText(tx).width > 208 && s > 16);
+      g.fillStyle = c;
+      g.fillText(tx, x + 128, y + 66);
+      g.shadowBlur = 0;
+      g.fillStyle = 'rgba(0,0,0,.25)';
+      g.fillRect(x + 4, y + 4, 248, 26)
+    })
+  });
+  const bstT = cv(512, 512, g => {
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#173f28';
+    g.fillRect(0, 0, 256, 128);
+    g.strokeStyle = '#7ee2a0';
+    g.lineWidth = 4;
+    g.strokeRect(8, 8, 240, 112);
+    g.fillStyle = '#a8f0c0';
+    g.font = `700 56px ${FNT}`;
+    g.fillText('ВЫХОД', 112, 64);
+    g.strokeStyle = '#a8f0c0';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(214, 84);
+    g.lineTo(214, 44);
+    g.moveTo(202, 58);
+    g.lineTo(214, 42);
+    g.lineTo(226, 58);
+    g.stroke();
+    g.fillStyle = '#3a3d40';
+    g.fillRect(256, 0, 256, 128);
+    g.fillStyle = '#c8cdc9';
+    g.font = `700 52px ${FNT}`;
+    g.fillText('ПОДВАЛ', 384, 60);
+    g.strokeStyle = 'rgba(20,22,24,.5)';
+    g.lineWidth = 10;
+    g.beginPath();
+    g.moveTo(272, 22);
+    g.lineTo(496, 106);
+    g.stroke();
+    g.fillStyle = '#22262a';
+    g.fillRect(0, 256, 256, 128);
+    g.fillStyle = '#d8d4c8';
+    g.fillRect(56, 300, 90, 16);
+    g.fillStyle = '#8a8578';
+    g.fillRect(146, 296, 18, 24);
+    g.strokeStyle = '#e83a3a';
+    g.lineWidth = 8;
+    g.beginPath();
+    g.arc(128, 320, 52, 0, 7);
+    g.moveTo(92, 284);
+    g.lineTo(164, 356);
+    g.stroke();
+    g.fillStyle = '#2a2e33';
+    g.fillRect(256, 256, 256, 128);
+    g.fillStyle = '#e0d8b8';
+    g.font = `700 44px ${FNT}`;
+    g.fillText('ЛАВКА →', 384, 320)
+  });
+  const beamT = cv(32, 128, g => {
+    const gr = g.createLinearGradient(0, 0, 0, 128);
+    gr.addColorStop(0, 'rgba(255,255,255,0)');
+    gr.addColorStop(.7, 'rgba(255,255,255,.3)');
+    gr.addColorStop(1, 'rgba(255,255,255,.85)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 32, 128)
+  });
+  // улицы двух типов: 0 — узкий переулок с кабелями, 1 — широкая улица с опорами, проводами и неоном
+  const WD = [4.4, 9],
+    TX = [0, 1, 0, 0, 1, 0, 0, 1],
+    TZ = [0, 0, 1, 0, 0, 1, 0, 0],
+    XS = [],
+    XO = [],
+    ZS = [],
+    ZO = [];
+  {
+    let x = 0,
+      z = 0;
+    for (let i = 0; i <= G; i++) {
+      XS.push(x);
+      ZS.push(z);
+      x += WD[TX[i]];
+      z += WD[TZ[i]];
+      XO.push(x);
+      ZO.push(z);
+      x += 12;
+      z += 12
+    }
+  }
+  const EX = XO[G],
+    EZ = ZO[G];
+  // === PATCH C: план подвалов — лазы с узких улиц (шифр чанка → геометрия шахты и комнаты) ===
+  const BSP = [
+    [1, 1], [4, 1], [2, 3], [5, 4], [3, 6]
+  ].filter(([k, l]) => l > 0 && l < G && TZ[l] == 0).map(([k, l]) => {
+    const ox = XO[k], oz = ZO[l];
+    return {
+      k, l,
+      hx0: ox - 3.25, hx1: ox - 2.05,
+      hz0: oz - 4.2, hz1: oz - .8,
+      rx0: ox - 4.4, rx1: ox + 4.8,
+      rz0: oz - 8.6, rz1: oz - 4.2,
+      fy: -3
+    }
+  });
+  const GHOLES = [];
+  BSP.forEach(b => GHOLES.push([b.hx0, b.hz0, b.hx1, b.hz1]));
+  const gSh = new T.Shape();
+  gSh.moveTo(-40, 40);
+  gSh.lineTo(EX + 40, 40);
+  gSh.lineTo(EX + 40, -(EZ + 40));
+  gSh.lineTo(-40, -(EZ + 40));
+  gSh.closePath();
+  GHOLES.forEach(([x0, z0, x1, z1]) => {
+    const pth = new T.Path();
+    pth.moveTo(x0, -z0);
+    pth.lineTo(x1, -z0);
+    pth.lineTo(x1, -z1);
+    pth.lineTo(x0, -z1);
+    pth.closePath();
+    gSh.holes.push(pth)
+  });
+  const gGeo = new T.ShapeGeometry(gSh);
+  {
+    const gp = gGeo.attributes.position, gu = gGeo.attributes.uv;
+    for (let i = 0; i < gp.count; i++) gu.setXY(i, gp.getX(i) / 3.5, gp.getY(i) / 3.5)
+  }
+  const ground = new T.Mesh(gGeo, new T.MeshStandardMaterial({
+    map: aT,
+    roughnessMap: arT,
+    roughness: 1,
+    metalness: .22,
+    envMap: envT,
+    envMapIntensity: .55,
+    color: 0xb8bcc0,
+    side: T.DoubleSide
+  }));
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
+  const gfT = cv(1024, 192, g => {
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.lineJoin = 'round';
+    const c = ['#ff3d9a', '#46f0c0', '#ffd23a', '#9a6cff'];
+    for (let i = 0; i < 4; i++) {
+      const cx = i * 256 + 128;
+      for (let j = 0; j < 2; j++) {
+        const t = ['九龍', 'KWC', '夜', 'XOXO', '城寨', '404', 'NEON', '龍'][R() * 8 | 0];
+        g.font = `900 ${50+R()*40|0}px ${FNT}`;
+        g.lineWidth = 9;
+        g.strokeStyle = '#0a0a0c';
+        g.save();
+        g.translate(cx + (R() - .5) * 60, 56 + j * 66);
+        g.rotate((R() - .5) * .35);
+        g.strokeText(t, 0, 0);
+        g.fillStyle = c[R() * 4 | 0];
+        g.fillText(t, 0, 0);
+        g.restore()
+      }
+      for (let d = 0; d < 4; d++) {
+        g.fillStyle = c[i];
+        g.fillRect(cx - 70 + R() * 140, 120 + R() * 20, 3, 20 + R() * 30)
+      }
+    }
+  });
+  const MGF = new T.MeshBasicMaterial({
+    map: gfT,
+    color: 0x9a9a9a,
+    transparent: true,
+    depthWrite: false
+  });
+
+  const SCU = {
+    value: 1
+  };
+  // === PATCH E: синхронное мерцание — общий uniform времени и JS-функция с той же формулой ===
+  const UT = {
+    value: 0
+  };
+  const flkJ = (t, ph) => {
+    let f = .88 + .12 * Math.sin(t * (5 + Math.abs(ph) % 1 * 4) + ph * 17);
+    if (Math.sin(t * .63 + ph * 7.3) > .986) f *= .5;
+    return f
+  };
+  const PM = uf => new T.ShaderMaterial({
+    uniforms: {
+      map: {
+        value: glowT
+      },
+      k: {
+        value: 1
+      },
+      sc: SCU,
+      uT: UT,
+      uF: {
+        value: uf || 0
+      }
+    },
+    transparent: true,
+    depthWrite: false,
+    blending: T.AdditiveBlending,
+    vertexShader: 'attribute vec3 col;attribute float size;attribute float ph;varying vec3 vc;uniform float k,sc,uT,uF;void main(){vec4 m=modelViewMatrix*vec4(position,1.);float d=max(-m.z,.1);float fz=.88+.12*sin(uT*(5.+fract(abs(ph))*4.)+ph*17.);fz*=1.-step(.986,sin(uT*.63+ph*7.3))*.5;vc=col*k*mix(1.,fz,uF)*clamp(1.-d/58.,0.,1.);gl_PointSize=min(size*sc/d,160.);gl_Position=projectionMatrix*m;}',
+    fragmentShader: 'uniform sampler2D map;varying vec3 vc;void main(){gl_FragColor=vec4(vc*texture2D(map,gl_PointCoord).a,1.);}'
+  });
+  const HA_M = PM(1),
+    HB_M = PM(1);
+  const MD = new T.MeshStandardMaterial({
+      map: dT,
+      vertexColors: true,
+      roughness: .6,
+      metalness: .2,
+      side: T.DoubleSide
+    }),
+    MN = new T.MeshBasicMaterial({
+      vertexColors: true
+    }),
+    MS = new T.MeshLambertMaterial({
+      map: atlas,
+      emissiveMap: atlas,
+      emissive: 0x666666,
+      side: T.DoubleSide
+    }),
+    MH = new T.MeshStandardMaterial({
+      map: shT,
+      roughness: .75,
+      metalness: .25
+    }),
+    MG = new T.MeshBasicMaterial({
+      map: glowT,
+      vertexColors: true,
+      blending: T.AdditiveBlending,
+      transparent: true,
+      depthWrite: false
+    });
+  const MP = new T.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: .2,
+      metalness: .05,
+      side: T.DoubleSide
+    }),
+    MM = new T.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: .35,
+      metalness: .55,
+      side: T.DoubleSide
+    }),
+    MGL = new T.MeshBasicMaterial({
+      map: glT,
+      blending: T.AdditiveBlending,
+      transparent: true,
+      depthWrite: false
+    }),
+    MA = new T.MeshStandardMaterial({
+      map: awT,
+      roughness: .6,
+      side: T.DoubleSide
+    });
+  const MC = new T.MeshStandardMaterial({
+      map: cbT,
+      vertexColors: true,
+      roughness: .92,
+      metalness: 0,
+      side: T.DoubleSide
+    }),
+    MW = new T.MeshStandardMaterial({
+      map: wdT,
+      vertexColors: true,
+      roughness: .85,
+      metalness: 0,
+      side: T.DoubleSide
+    }),
+    MR = new T.MeshStandardMaterial({
+      map: rsT,
+      vertexColors: true,
+      roughness: .55,
+      metalness: .5,
+      side: T.DoubleSide
+    }),
+    MBG = new T.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: .22,
+      metalness: .05,
+      bumpMap: crT,
+      bumpScale: 2,
+      side: T.DoubleSide
+    });
+  // === PATCH D: материалы новых систем (навесы, граффити, крышный неон, бетон, лужи, затемнение) ===
+  const MCM = new T.MeshStandardMaterial({
+      map: cmT,
+      vertexColors: true,
+      roughness: .52,
+      metalness: .62,
+      side: T.DoubleSide
+    }),
+    MDK = new T.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: .42,
+      depthWrite: false
+    }),
+    MGF2 = new T.MeshLambertMaterial({
+      map: gf2T,
+      transparent: true,
+      depthWrite: false,
+      side: T.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2
+    }),
+    MRS = new T.MeshBasicMaterial({
+      map: rtT
+    }),
+    MBS = new T.MeshLambertMaterial({
+      map: bstT,
+      emissive: 0x666666,
+      emissiveMap: bstT,
+      side: T.DoubleSide
+    }),
+    MBC = new T.MeshStandardMaterial({
+      map: concT,
+      vertexColors: true,
+      roughness: .88,
+      metalness: .02
+    }),
+    MPud = new T.MeshStandardMaterial({
+      color: 0x0a0d12,
+      roughness: .06,
+      metalness: .72,
+      transparent: true,
+      opacity: .93,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
+    });
+  const box = new T.BoxGeometry(1, 1, 1).toNonIndexed(),
+    pl = new T.PlaneGeometry(1, 1).toNonIndexed(),
+    cy = new T.CylinderGeometry(.5, .5, 1, 8).toNonIndexed(),
+    sp = new T.SphereGeometry(.5, 6, 4).toNonIndexed(),
+    co = new T.CylinderGeometry(.35, .5, 1, 8).toNonIndexed(),
+    to = new T.TorusGeometry(.5, .05, 6, 16).toNonIndexed(),
+    sp2 = new T.SphereGeometry(.5, 10, 7).toNonIndexed(),
+    cb = new T.CylinderGeometry(.5, .5, 1, 3, 1, true).rotateX(Math.PI / 2).toNonIndexed(),
+    cy2 = new T.CylinderGeometry(.5, .5, 1, 14).toNonIndexed(),
+    cir = new T.CircleGeometry(1, 14).toNonIndexed();
+  const hard = box.clone();
+  {
+    const n = box.attributes.normal,
+      p = box.attributes.position,
+      k = .32;
+    for (let i = 0; i < p.count; i++) {
+      let nx = n.getX(i),
+        ny = n.getY(i),
+        nz = n.getZ(i);
+      if (!nx) nx = Math.sign(p.getX(i)) * k;
+      if (!ny) ny = Math.sign(p.getY(i)) * k;
+      if (!nz) nz = Math.sign(p.getZ(i)) * k;
+      const l = Math.hypot(nx, ny, nz);
+      n.setXYZ(i, nx / l, ny / l, nz / l)
+    }
+  }
+  const bx = (a, b) => {
+    const g = hard.clone(),
+      u = g.attributes.uv;
+    for (let i = 0; i < u.count; i++) u.setXY(i, u.getX(i) * a, u.getY(i) * b);
+    return g
+  };
+  const FL = [6, 9, 13, 18, 24],
+    BU = {};
+  FL.forEach(f => BU[f] = bx(1, f / 4));
+  const C = s => new T.Color(s),
+    sc = (c, k) => c.clone().multiplyScalar(k),
+    AW = ['#6e2a2a', '#2a5446', '#6e5a2a', '#2a3d5e', '#8a8a80'].map(C);
+  const TC = ['#7a8a80', '#9a9484', '#5a6a70', '#8a5a44'].map(C),
+    GC = ['#d94a2a', '#e6c33a', '#3aa86a', '#4a7ad0', '#e8e0cc', '#c27ad0'],
+    CC = ['#0a0c0b', '#0a0c0b', '#16120c', '#1c1c22', '#2a1010', '#102018'].map(C),
+    LC = ['#e8452a', '#e8452a', '#f2c14a', '#e84a8a'].map(C),
+    PAP = ['#d8d4c0', '#c8c4b0', '#e8e0cc', '#b8b8a8'].map(C),
+    CAN = ['#a8b0b4', '#c83a2a', '#2a6ab0', '#d8c040'].map(C),
+    BOT = ['#3a8a5a', '#c8d8d8', '#8a5a2a', '#2a5a8a'].map(C),
+    LEAF = ['#3a4a22', '#5a4a22', '#2a3a20'].map(C);
+  const TN = ['#ffffff', '#ffe9d0', '#d8f0e8', '#f0d8d8', '#d8dcf0', '#f0ecc0', '#c8d8c0', '#e8c8b0'].map(
+      C),
+    DF = [
+      [18, 24, 24, 18, 13],
+      [6, 9, 9, 13],
+      [13, 18, 13, 24], FL, FL
+    ];
+  const o = new T.Object3D();
+  o.rotation.order = 'YXZ';
+  const mat = (x, y, z, a, b, c, ry, rx, rz) => {
+    o.position.set(x, y, z);
+    o.rotation.set(rx || 0, ry || 0, rz || 0);
+    o.scale.set(a, b, c);
+    o.updateMatrix();
+    return o.matrix
+  };
+  const B = () => ({
+      p: [],
+      n: [],
+      u: [],
+      c: []
+    }),
+    H = () => ({
+      p: [],
+      c: [],
+      s: [],
+      ph: []
+    });
+
+  function add(b, src, m, col, rc) {
+    const g = src.clone().applyMatrix4(m),
+      p = g.attributes.position.array,
+      n = g.attributes.normal.array,
+      u = g.attributes.uv.array;
+    for (let i = 0; i < p.length; i++) {
+      b.p.push(p[i]);
+      b.n.push(n[i])
+    }
+    for (let i = 0; i < u.length; i += 2) rc ? b.u.push(rc[0] + (rc[2] - rc[0]) * u[i], rc[1] + (rc[3] -
+      rc[1]) * u[i + 1]) : b.u.push(u[i], u[i + 1]);
+    if (col)
+      for (let i = 0; i < p.length / 3; i++) b.c.push(col.r, col.g, col.b)
+  }
+  const seg = (b, a, c, t, col) => {
+    o.position.set((a[0] + c[0]) / 2, (a[1] + c[1]) / 2, (a[2] + c[2]) / 2);
+    o.lookAt(c[0], c[1], c[2]);
+    o.scale.set(t, t, Math.hypot(c[0] - a[0], c[1] - a[1], c[2] - a[2]));
+    o.updateMatrix();
+    add(b, cb, o.matrix, col)
+  };
+  const toMesh = (grp, b, m) => {
+    if (!b.p.length) return;
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.Float32BufferAttribute(b.p, 3));
+    g.setAttribute('normal', new T.Float32BufferAttribute(b.n, 3));
+    g.setAttribute('uv', new T.Float32BufferAttribute(b.u, 2));
+    if (b.c.length) g.setAttribute('color', new T.Float32BufferAttribute(b.c, 3));
+    grp.add(new T.Mesh(g, m))
+  };
+  const toPts = (grp, b, m) => {
+    if (!b.p.length) return;
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.Float32BufferAttribute(b.p, 3));
+    g.setAttribute('col', new T.Float32BufferAttribute(b.c, 3));
+    g.setAttribute('size', new T.Float32BufferAttribute(b.s, 1));
+    g.setAttribute('ph', new T.Float32BufferAttribute(b.ph, 1));
+    grp.add(new T.Points(g, m))
+  };
+  const hl = (b, x, y, z, s, c) => {
+    b.p.push(x, y, z);
+    b.c.push(c.r, c.g, c.b);
+    b.s.push(s);
+    b.ph.push(Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1 * 6.28)
+  };
+  const fits = (occ, a, y, w, h) => {
+    for (const q of occ)
+      if (Math.abs(a - q[0]) < (w + q[2]) / 2 && Math.abs(y - q[1]) < (h + q[3]) / 2) return 0;
+    occ.push([a, y, w, h]);
+    return 1
+  };
+  const lo = (x, z, ry, a, b) => [x + Math.cos(ry) * a + Math.sin(ry) * b, z - Math.sin(ry) * a + Math
+    .cos(ry) * b
+  ];
+
+  const chunks = [],
+    sol = [],
+    vents = [],
+    LS = [],
+    WALLS = [],
+    FLR = [],
+    SPKS = [],
+    DRIPS = [];
+  const FRM = ['#2c322e', '#5a2a22', '#1e3a52', '#2a4a3a', '#6a5a3a', '#3a3a46', '#7a6a5a'].map(C),
+    KL = [
+      [.9, 1, .9],
+      [1, .7, .35],
+      [1, .5, .25],
+      [.35, 1, .6],
+      [.4, .7, 1],
+      [1, .4, .7],
+      [1, .45, .2],
+      [.5, .9, 1]
+    ],
+    KG = ['#5a5646', '#5a4426', '#6a3a18', '#1a5a38', '#2a4a5a', '#5a2a44', '#5a2a14', '#2a4a5a'].map(C),
+    RAD = [.95, .7, .95, .7, .65, .95, .35, .5, .75, 1, .55, .8, .8, .5, .4, .7, .6];
+
+  function chunk(k, l) {
+    const ox = XO[k],
+      oz = ZO[l],
+      grp = new T.Group(),
+      dst = ((k * 5 + l * 3 + k * l) % 5 + 5) % 5,
+      fb = [B(), B(), B(), B(), B(), B()],
+      D = B(),
+      N = B(),
+      SG = B(),
+      GL = B(),
+      SH = B(),
+      PB = B(),
+      MB = B(),
+      GB = B(),
+      AB = B(),
+      CB = B(),
+      WB = B(),
+      RB = B(),
+      BG = B(),
+      GF = B(),
+      RSB = B(),
+      GFL = B(),
+      DK = B(),
+      CM = B(),
+      BC = B(),
+      BSG = B(),
+      PDB = B(),
+      HA = H(),
+      HB = H();
+    const pool = () => {},
+      occ2 = [],
+      edge = k == 0 || l == 0 || k == G - 1 || l == G - 1;
+    let bsm = null;
+    for (const bq of BSP) if (bq.k == k && bq.l == l) bsm = bq;
+    if (bsm) occ2.push([(bsm.hx0 + bsm.hx1) / 2, (bsm.hz0 + bsm.hz1) / 2, 3.4]);
+    const cable = (x0, y0, z0, x1, y1, z1, strands) => {
+      const sg = .5 + rnd() * 1.2,
+        th = .04 + rnd() * .07,
+        pt = (t, w) => [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t - sg * 4 * t * (1 - t) - (w || 0) * .12,
+          z0 + (z1 - z0) * t
+        ];
+      const c1 = pick(CC);
+      for (let w = 0; w < (strands || 2); w++) {
+        const c2 = w ? pick(CC) : c1;
+        for (let i = 0; i < 6; i++) seg(D, pt(i / 6, w), pt((i + 1) / 6, w), th * (w ? .7 : 1), c2)
+      }
+      add(D, sp, mat(x0, y0, z0, .17, .17, .17), C('#6a6a60'));
+      add(D, sp, mat(x1, y1, z1, .17, .17, .17), C('#6a6a60'));
+      if (rnd() < .05) {
+        const mq = pt(.5);
+        SPKS.push([mq[0], mq[1], mq[2]])
+      }
+      return pt
+    };
+    const gcab = (x0, z0, x1, z1) => {
+      const pt = t => [x0 + (x1 - x0) * t + Math.sin(t * 9) * .2, .05 + Math.abs(Math.sin(t * 7.5)) *
+          .05, z0 + (z1 - z0) * t + Math.cos(t * 7) * .2
+        ],
+        c = pick(CC);
+      for (let i = 0; i < 8; i++) seg(D, pt(i / 8), pt((i + 1) / 8), .07, c)
+    };
+    const lant = (x0, z0, x1, z1) => {
+      const pt = cable(x0, 6 + rnd() * 5, z0, x1, 6 + rnd() * 5, z1, 1);
+      for (let i = 0; i < 5; i++) {
+        const q = pt(.12 + i * .19, 0),
+          cc = pick(LC);
+        add(D, cy, mat(q[0], q[1] - .12, q[2], .03, .26, .03), C('#222'));
+        add(N, sp2, mat(q[0], q[1] - .3, q[2], .3, .42, .3), cc);
+        hl(HA, q[0], q[1] - .3, q[2], 1.6, sc(cc, .35))
+      }
+    };
+    const vend = (x, z, ry, kind) => {
+      const bc = C(['#c8281e', '#1e5aa8', '#2a8a4a', '#e8b020', '#7a2a8a'][kind % 5]),
+        f = (a, o) => lo(x, z, ry, a, o),
+        pr = ['#e8591c', '#c8281e', '#2a8aff', '#e6c33a', '#3aa86a', '#f0f0f0', '#c27ad0'];
+      let q;
+      add(PB, box, mat(x, .95, z, .92, 1.9, .6, ry), sc(bc, .75));
+      add(PB, box, mat(x, .05, z, .98, .1, .66, ry), C('#15181a'));
+      add(PB, box, mat(x, 1.92, z, .98, .06, .66, ry), sc(bc, .45));
+      q = f(-.12, .31);
+      add(N, box, mat(q[0], 1.2, q[1], .66, 1.2, .02, ry), C('#d8ecff'));
+      for (let rw = 0; rw < 5; rw++) {
+        const y = .68 + rw * .22;
+        q = f(-.12, .33);
+        add(D, box, mat(q[0], y - .1, q[1], .64, .015, .06, ry), C('#2a2a2a'));
+        for (let c = 0; c < 5; c++) {
+          q = f(-.35 + c * .115, .345);
+          add(PB, cy, mat(q[0], y, q[1], .075, .17, .075, ry), C(pick(pr)));
+          add(PB, cy, mat(q[0], y + .1, q[1], .035, .04, .035, ry), C('#eee'))
+        }
+      }
+      q = f(-.12, .39);
+      add(GB, pl, mat(q[0], 1.2, q[1], .66, 1.2, 1, ry));
+      for (const s of [-1, 1]) {
+        q = f(-.12 + s * .34, .385);
+        add(D, box, mat(q[0], 1.2, q[1], .03, 1.24, .04, ry), C('#1a1a1a'))
+      }
+      q = f(.34, .33);
+      add(D, box, mat(q[0], 1.35, q[1], .17, .8, .04, ry), C('#15191a'));
+      for (let b = 0; b < 8; b++) {
+        q = f(.31 + (b % 2) * .06, .355);
+        add(N, box, mat(q[0], 1.65 - (b >> 1) * .1, q[1], .045, .05, .02, ry), C(b % 3 ? '#3aff8a' :
+          '#ffd24a'))
+      }
+      q = f(.34, .35);
+      add(D, box, mat(q[0], 1.05, q[1], .12, .03, .02, ry), C('#050607'));
+      q = f(-.12, .33);
+      add(D, box, mat(q[0], .3, q[1], .64, .26, .04, ry), C('#050607'));
+      q = f(-.12, .33);
+      add(N, box, mat(q[0], 1.8, q[1], .7, .1, .02, ry), sc(bc, 1.7));
+      hl(HA, q[0], 1.9, q[1], 2.4, sc(bc, .28));
+      if (rnd() < .6) LS.push([q[0], 1.6, q[1], bc.r * 1.2, bc.g * 1.2, bc.b * 1.2, 0])
+    };
+    const plaza = (cx, cz) => {
+      const wc = () => sc(C('#ffffff'), .75 + R() * .35),
+        sx = cx - 2.2,
+        sz = cz,
+        gd = C('#d9b92e'),
+        rd = C('#a01e18');
+      add(D, box, mat(cx, .05, cz, 6, .1, 6), C('#40463f'));
+      add(D, box, mat(sx + .1, .2, sz, 1.7, .2, 3), C('#6a6862'));
+      add(D, box, mat(sx + 1.05, .1, sz, .5, .1, 1.4), C('#7a786f'));
+      add(PB, box, mat(sx - .55, 1.5, sz, .16, 2.5, 2.4), C('#4a100e'));
+      for (const s of [-1, 1]) {
+        add(PB, cy2, mat(sx + .3, 1.45, sz + s * 1.15, .2, 2.5, .2), rd);
+        add(MB, cy2, mat(sx + .3, .4, sz + s * 1.15, .26, .1, .26), C('#2a2420'))
+      }
+      add(PB, box, mat(sx, 2.78, sz, 1.3, .14, 2.8), C('#26120f'));
+      add(PB, box, mat(sx, 2.95, sz, 1, .14, 2.3), C('#3a1a12'));
+      add(PB, box, mat(sx, 3.12, sz, .7, .14, 1.8), C('#26120f'));
+      add(MB, box, mat(sx + .35, 2.62, sz, .05, .12, 2.5), gd);
+      add(PB, box, mat(sx + .05, .55, sz, .7, .7, 1.7), C('#5a1410'));
+      add(PB, box, mat(sx + .05, .93, sz, .8, .07, 1.8), C('#7a1c14'));
+      add(MB, cy2, mat(sx - .2, 1.2, sz, .5, .5, .5), gd);
+      add(MB, sp2, mat(sx - .2, 1.62, sz, .4, .4, .4), gd);
+      for (let b = 0; b < 4; b++) add(PB, sp2, mat(sx + .2, 1.03, sz - .6 + b * .4, .22, .2, .22), C(
+        pick(['#e8591c', '#e6c33a', '#c8281e'])));
+      add(MB, cy2, mat(sx + .95, .38, sz, .5, .28, .5), C('#8a6a2a'));
+      for (let b = 0; b < 7; b++) add(N, cy, mat(sx + .95 + (b % 3 - 1) * .1, .62, sz + (b % 2 - .5) *
+        .14, .015, .3, .015), C('#ff4a2a'));
+      hl(HA, sx + .95, .7, sz, 2.2, C('#6a2014'));
+      vents.push([sx + .95, sz]);
+      for (const s of [-1, 1]) {
+        add(N, sp2, mat(sx + .7, 2.4, sz + s * 1.2, .34, .44, .34), C('#e83a22'));
+        hl(HA, sx + .7, 2.4, sz + s * 1.2, 2.6, C('#6a2014'))
+      }
+      LS.push([sx + .7, 2.3, sz, 1, .35, .15, 1]);
+      for (const s of [-1, 0, 1]) sol.push([sx + .2, sz + s * 1.05, .85]);
+      for (const s of [0, 1]) {
+        const bx0 = cx - .2 + s * 2,
+          bz0 = cz + 2.3;
+        add(WB, box, mat(bx0, .45, bz0, 1.5, .06, .5), wc());
+        add(WB, box, mat(bx0, .8, bz0 + .22, 1.5, .5, .06), wc());
+        for (const d of [-.6, .6]) add(D, box, mat(bx0 + d, .22, bz0, .06, .44, .4), C('#333'));
+        sol.push([bx0, bz0, .8])
+      }
+      vend(cx + 2.65, cz + .5, Math.PI / 2, rnd() * 5 | 0);
+      sol.push([cx + 2.65, cz + .5, .6])
+    };
+    for (let ix = 0; ix < 2; ix++)
+      for (let iz = 0; iz < 2; iz++) {
+        if (dst == 4 && ix && iz) {
+          plaza(ox + 9, oz + 9);
+          continue
+        }
+        const cx = ox + 3 + ix * 6,
+          cz = oz + 3 + iz * 6,
+          F = edge ? pick([13, 18, 18, 24, 24]) : pick(DF[dst].concat(FL)),
+          h = F * 3,
+          fmb = fb[rnd() * 6 | 0],
+          a0 = .7 + rnd() * .4;
+        add(fmb, BU[F], mat(cx, h / 2, cz, 6, h, 6), sc(pick(TN), a0 * 1.15), [(rnd() * 4 | 0) / 4, (
+        rnd() * 4 | 0) / 4, (rnd() * 4 | 0) / 4 + 1, (rnd() * 4 | 0) / 4 + 1].map((v, i, a) => i < 2 ?
+          v : a[i - 2] + 1));
+        add(D, cy, mat(cx + 1, h + .8, cz - 1, 2, 1.6, 2), C('#3a3f3b'));
+        add(D, cy, mat(cx - 1.5, h + 2.5, cz + 1, .1, 5, .1), C('#111'));
+        hl(HB, cx - 1.5, h + 5.1, cz + 1, 1.1, C('#a01818'));
+        add(D, box, mat(cx, .15, cz, 6.3, .3, 6.3), C('#3b3f3c'));
+        for (let y = 9; y < h - 1; y += 9) add(D, box, mat(cx, y, cz, 6.25, .22, 6.25), C('#4b514d'));
+        for (const s of [-1, 1]) {
+          add(D, box, mat(cx, h + .3, cz + s * 3, 6.2, .6, .2), C('#3a3f3b'));
+          add(D, box, mat(cx + s * 3, h + .3, cz, .2, .6, 6.2), C('#3a3f3b'))
+        }
+        // === PATCH F: ступенчатые крыши, пристройки, мигающий крышный неон ===
+        if (rnd() < .5) {
+          let sbh = h, sbw = 4.5, scx = cx, scz = cz;
+          const ns2 = 1 + (rnd() * 2 | 0), ru = [(rnd() * 4 | 0) / 4, (rnd() * 4 | 0) / 4];
+          for (let s3 = 0; s3 < ns2; s3++) {
+            const sh2 = 1.8 + rnd() * 1.3;
+            add(fmb, BU[F], mat(scx, sbh + sh2 / 2, scz, sbw, sh2, sbw), sc(pick(TN), a0), [ru[0], ru[1], ru[0] + .18, ru[1] + .18]);
+            sbh += sh2;
+            sbw -= 1 + rnd() * .7;
+            scx += (rnd() - .5) * .5;
+            scz += (rnd() - .5) * .5
+          }
+        }
+        if (rnd() < .38) {
+          const as3 = rnd() < .5 ? -1 : 1, az3 = rnd() < .5,
+            acx = az3 ? cx + as3 * 2.55 : cx + (rnd() - .5) * 2,
+            acz = az3 ? cz + (rnd() - .5) * 2 : cz + as3 * 2.55,
+            ah2 = h * .28 + 2;
+          add(fmb, BU[6], mat(acx, ah2 / 2, acz, az3 ? 2.7 : 2.4, ah2, az3 ? 2.4 : 2.7), sc(pick(TN), a0 * .9), [(rnd() * 4 | 0) / 4, (rnd() * 4 | 0) / 4, (rnd() * 4 | 0) / 4 + .5, (rnd() * 4 | 0) / 4 + .5]);
+          add(D, box, mat(acx, ah2 + .15, acz, az3 ? 2.8 : 2.5, .3, az3 ? 2.5 : 2.8), C('#3a3f3b'));
+          if (rnd() < .6) add(D, cy, mat(acx + (rnd() - .5), ah2 + .8, acz + (rnd() - .5), .8, .5, .8), C('#4a504c'))
+        }
+        if (rnd() < .55) {
+          const ri = rnd() * RTX.length | 0, rtc = RTX[ri][1], rry = (rnd() * 4 | 0) * Math.PI / 2,
+            rpx = cx + Math.sin(rry) * 2.2, rpz = cz + Math.cos(rry) * 2.2, rpy = h + 1.55;
+          add(D, cy, mat(rpx - Math.cos(rry) * .8, h + .8, rpz + Math.sin(rry) * .8, .07, 1.6, .07), C('#26292b'));
+          add(D, cy, mat(rpx + Math.cos(rry) * .8, h + .8, rpz - Math.sin(rry) * .8, .07, 1.6, .07), C('#26292b'));
+          add(D, box, mat(rpx, rpy - .62, rpz, 2.5, .12, 1.3, rry), C('#1a1d20'));
+          add(D, box, mat(rpx - Math.sin(rry) * .07, rpy, rpz - Math.cos(rry) * .07, 2.4, 1.2, .08, rry), C('#0b0d10'));
+          add(RSB, pl, mat(rpx, rpy, rpz, 2.3, 1.15, 1, rry), null, [ri % 4 * .25, 1 - ((ri >> 2) + 1) * .25, (ri % 4) * .25 + .25, 1 - (ri >> 2) * .25]);
+          hl(HB, rpx, rpy, rpz, 3.6, sc(C(rtc), .3));
+          if (rnd() < .4) {
+            const rc4 = C(rtc);
+            LS.push([rpx + Math.sin(rry) * .5, rpy, rpz + Math.cos(rry) * .5, rc4.r, rc4.g, rc4.b, 1])
+          }
+        }
+        if (rnd() < .6) {
+          for (const s of [-1, 1]) add(D, cy, mat(cx - 1.4 + s * .5, h + 1.05, cz - 1.6, .1, 2.1, .1), C(
+            '#2a2a2a'));
+          add(PB, cy, mat(cx - 1.4, h + 2.3, cz - 1.6, 1.4, 1.4, 1.4), C('#3a5a8a'));
+          add(D, co, mat(cx - 1.4, h + 3.2, cz - 1.6, 1.5, .35, 1.5), C('#2a2f2c'))
+        }
+        if (rnd() < .5) {
+          add(D, box, mat(cx + 1.7, h + .55, cz + 1.7, 1.3, 1.1, 1.5), C('#4a4f4a'));
+          add(D, box, mat(cx + 1.7, h + .45, cz + 2.46, .4, .9, .05), C('#1a1a1a'))
+        }
+        if (rnd() < .5) {
+          add(MB, sp2, mat(cx + .2, h + 1.4, cz + 1, 1, .25, 1, 0, .9), C('#c8c8c0'));
+          add(D, cy, mat(cx + .2, h + .75, cz + 1, .05, 1.5, .05), C('#222'))
+        }
+        [
+          [ix ? 1 : -1, 0],
+          [0, iz ? 1 : -1]
+        ].forEach(([n0, n1]) => {
+          const stt = n0 ? (n0 > 0 ? TX[k + 1] : TX[k]) : (n1 > 0 ? TZ[l + 1] : TZ[l]),
+            t0 = -n1,
+            t1 = n0,
+            ry = Math.atan2(n0, n1),
+            ryt = Math.atan2(t0, t1),
+            fp = (a, off) => [cx + n0 * (3 + off) + t0 * a, cz + n1 * (3 + off) + t1 * a],
+            occ = [
+              [0, 1.5, 6, 3.4]
+            ];
+          const bay = a => {
+            const kd = stt ? pick([8, 8, 9, 9]) : pick([8, 9, 8, 9, 8, 9]),
+              fr = pick(FRM),
+              bb = (aa, o, y, w, h, d, col, m, g) => {
+                const p = fp(a + aa, o);
+                add(m || D, g || box, mat(p[0], y, p[1], w, h, d, ry), col)
+              },
+              gl = (aa, o, y, c, s) => {
+                const p = fp(a + aa, o);
+                hl(HA, p[0], y, p[1], s, c)
+              },
+              ls = (o, y, c) => {
+                const p = fp(a, o);
+                LS.push([p[0], y, p[1], c[0], c[1], c[2], 0])
+              };
+            bb(0, .05, 1.25, 2.8, 2.5, .12, C(kd == 9 ? '#0e1210' : '#15191a'));
+            for (const s of [-1.4, 1.4]) bb(s, .14, 1.25, .16, 2.5, .26, fr);
+            bb(0, .16, 2.52, 3, .22, .3, fr);
+            if (kd == 8) {
+              const hh = 1.5 + rnd() * .9,
+                p = fp(a, .2);
+              add(SH, pl, mat(p[0], 2.45 - hh / 2, p[1], 2.6, hh, 1, ry));
+              if (stt) {
+                const q = fp(a, .27),
+                  g2 = (rnd() * 4 | 0) / 4;
+                add(GF, pl, mat(q[0], .95, q[1], 2.5, 1.8, 1, ry), null, [g2, 0, g2 + .25, 1])
+              }
+              bb(0, .24, 2.45 - hh + .06, 2.7, .12, .1, C('#3a3f3b'));
+              if (rnd() < .5) {
+                const g3 = rnd() * 8 | 0, grow2 = g3 < 4 ? 0 : 1, gp2 = fp(a + .7, .215);
+                add(GFL, pl, mat(gp2[0], 1.9, gp2[1], 1.2, 1.2, 1, ry), null, [g3 % 4 * .25 + .04, grow2 ? .54 : .04, g3 % 4 * .25 + .21, grow2 ? .96 : .46])
+              } else bb(.7, .23, 1.9, .5, .7, .02, pick(PAP));
+              bb(-.9, .6, .3, .7, .6, .5, sc(C('#ffffff'), .9), CB);
+              if (rnd() < .55) {
+                const nc = C(pick(GC));
+                bb(0, .34, 2.58, 2.3, .07, .04, nc, N);
+                gl(0, .34, 2.58, sc(nc, .4), 2.6);
+                const lq = fp(a, .4);
+                LS.push([lq[0], 2.58, lq[1], nc.r * .9, nc.g * .9, nc.b * .9, 0])
+              }
+            } else {
+              for (const s of [-1, 1]) bb(s * .95, .1, 1.25, .8, 2.5, .08, pick(TC));
+              bb(0, .12, 1.07, 1.3, 2.15, .1, C('#5a5e58'));
+              bb(0, .2, 1.0, 1.1, 2.0, .1, C('#2f4a40'), MB);
+              bb(0, .26, 1.6, .5, .35, .03, C('#e8d890'), N);
+              bb(0, .35, .07, 1.6, .14, .6, C('#6a6e68'));
+              bb(0, .35, 2.3, .22, .22, .22, C('#fff1c0'), N, sp2);
+              gl(0, .35, 2.3, C('#6a5a2a'), 2.6);
+              ls(.5, 2.2, [1, .85, .5]);
+              for (let m = 0; m < 3; m++) bb(-.95, .2, 1.0 + m * .22, .4, .18, .08, C(pick([
+                '#3a6fb0', '#8a8a80', '#c8a030'
+              ])), MB);
+              bb(.95, .2, 1.25, .18, .3, .05, C('#d8dcd8'));
+              bb(.95, .23, 1.32, .06, .04, .02, C('#46f09a'), N)
+            }
+            if (rnd() < .45) {
+              const p = fp(a, .62),
+                aj = (rnd() * 3 | 0) / 3;
+              add(AB, box, mat(p[0], 2.78, p[1], 2.9, .08, 1.1, ry, .18), null, [0, aj, 1, aj + 1 /
+                3
+              ]);
+              bb(0, 1.17, 2.64, 2.9, .14, .04, pick(AW))
+            }
+          };
+          bay(-1.5);
+          bay(1.5);
+          if (rnd() < .8) {
+            const a = (rnd() - .5) * 4,
+              [x, z] = fp(a, .16),
+              [hx, hz] = fp(a, .5),
+              [qx, qz] = fp(a, 1.5);
+            add(N, box, mat(x, 3.35, z, 1.2, .06, .1, ry), C('#e6f6ec'));
+            hl(HB, hx, 3.35, hz, 2.4, C('#46594d'));
+            pool(qx, qz, 6, C('#16221c'))
+          }
+          for (let b = 0; b < 2; b++) {
+            const y = 6 + rnd() * (h - 10);
+            if (!fits(occ, 0, y, 5, 1.3)) continue;
+            let [x, z] = fp(0, .55);
+            add(D, box, mat(x, y, z, 4.8, .14, 1, ry), C('#4a4a46'));
+            [x, z] = fp(0, 1.02);
+            add(D, box, mat(x, y + .5, z, 4.8, .9, .06, ry), C('#2a302d'))
+          }
+          let ns = 0;
+          for (let tr = 0; tr < 12 && ns < (dst == 2 ? 4 : 3); tr++) {
+            const v = rnd() < .4,
+              w = v ? .95 : 3.6,
+              hh = v ? 3.4 : 1.35,
+              a = (rnd() - .5) * (v ? 4.4 : 2.4),
+              y = (v ? 4.2 : 3.8) + rnd() * (h - (v ? 8 : 6));
+            if (!fits(occ, a, y, w + .2, hh + .3)) continue;
+            ns++;
+            const i = v ? rnd() * 10 | 0 : rnd() * 8 | 0,
+              u = v ? i * 96 : i % 4 * 256,
+              vv = (i >> 2) * 96,
+              rc = v ? [u / 1024, 0, (u + 96) / 1024, .5] : [u / 1024, 1 - (vv + 96) / 512, (u +
+                256) / 1024, 1 - vv / 512
+              ],
+              bg = C((v ? VS : HS)[i][0]);
+            if (v) {
+              const [x, z] = fp(a, .62);
+              add(D, box, mat(x, y + hh / 2, z, .06, .06, .95, ry), C('#111'));
+              add(SG, pl, mat(x, y, z, w, hh, 1, ryt), null, rc);
+              hl(HA, x, y, z, 2.2, sc(bg, .2));
+              if (rnd() < .5) LS.push([x, y, z, bg.r, bg.g, bg.b, 0])
+            } else {
+              let [x, z] = fp(a, .3);
+              add(D, box, mat(x, y, z, 3.7, 1.45, .3, ry), C('#1a1d1c'));
+              [x, z] = fp(a, .46);
+              add(SG, pl, mat(x, y, z, w, hh, 1, ry), null, rc);
+              [x, z] = fp(a, .9);
+              hl(HA, x, y, z, 3.4, sc(bg, .22));
+              if (rnd() < .5) LS.push([x, y, z, bg.r, bg.g, bg.b, 0])
+            }
+          }
+          for (let s = 0; s < 4; s++) {
+            const a = (rnd() - .5) * 5,
+              y = 3.4 + rnd() * (h - 5);
+            if (!fits(occ, a, y, 1, .8)) continue;
+            let [x, z] = fp(a, .3);
+            add(D, box, mat(x, y, z, .9, .65, .5, ry), C(pick(['#5a615d', '#4b524f', '#6a706a'])));
+            [x, z] = fp(a, .58);
+            add(D, cy, mat(x, y, z, .5, .04, .5, ry, Math.PI / 2), C('#1c201e'));
+            [x, z] = fp(a + .3, .3);
+            add(D, cy, mat(x, y - .6, z, .04, .55, .04), C('#8a9a96'))
+          }
+          // === PATCH G: балконы с перилами и бытом ===
+          for (let b3 = 0; b3 < 2; b3++) {
+            const ba = (rnd() - .5) * 3.4, by = 4.2 + rnd() * (h - 8.5);
+            if (by < 4 || !fits(occ, ba, by, 1.8, 1)) continue;
+            let [bx3, bz3] = fp(ba, .32);
+            add(MB, box, mat(bx3, by, bz3, 1.7, .07, .62, ry), C('#3d4340'));
+            [bx3, bz3] = fp(ba, .6);
+            add(MB, box, mat(bx3, by + .28, bz3, 1.7, .05, .05, ry), C('#4a504d'));
+            add(MB, box, mat(bx3, by + .56, bz3, 1.7, .05, .05, ry), C('#4a504d'));
+            for (let v3 = 0; v3 < 6; v3++) {
+              const [vx3, vz3] = fp(ba - .8 + v3 * .32, .6);
+              add(MB, box, mat(vx3, by + .28, vz3, .03, .56, .03, ry), C('#3a403d'))
+            }
+            if (rnd() < .5) {
+              const [cx3, cz3] = fp(ba + (rnd() - .5) * .9, .45);
+              add(CB, box, mat(cx3, by + .22, cz3, .5, .42, .42, ry + (rnd() - .5) * .5), C('#8a7a5c'))
+            }
+          }
+          // === PATCH P: граффити на стенах — через проверку занятости occ, без пересечений ===
+          if (rnd() < .55) {
+            const ga = (rnd() - .5) * 4.2, gy = 3.34 + rnd() * .5, gi = rnd() * 8 | 0,
+              grow = gi < 4 ? 0 : 1;
+            if (fits(occ, ga, gy, 2.1, .66)) {
+              const [gx, gz] = fp(ga, .075);
+              add(GFL, pl, mat(gx, gy, gz, 1.9, .6, 1, ry), null, [gi % 4 * .25 + .02, grow ? .52 : .02, gi % 4 * .25 + .23, grow ? .98 : .48])
+            }
+          }
+          if (rnd() < .7) {
+            const [x, z] = fp(rnd() < .5 ? -2.85 : 2.85, .12);
+            add(D, cy, mat(x, h / 2, z, .2, h, .2), C('#2b302d'))
+          }
+          if (rnd() < .6) {
+            const y = 5 + rnd() * (h - 8),
+              [x, z] = fp(0, .12);
+            add(D, cy, mat(x, y, z, .12, 5, .12, ry, 0, Math.PI / 2), C('#2b302d'));
+            add(D, cy, mat(x, y, z, .18, .2, .18, ry, 0, Math.PI / 2), C('#555'))
+          }
+          for (let c = 0; c < 2; c++) {
+            const y = 4 + rnd() * (h - 6),
+              [x0, z0] = fp(-2.8, .14),
+              [x1, z1] = fp(2.8, .14);
+            cable(x0, y, z0, x1, y + (rnd() - .5) * 2, z1, 2)
+          } {
+            const [jx, jz] = fp((rnd() - .5) * 4, .22), jy = 3 + rnd() * 5;
+            add(D, box, mat(jx, jy, jz, .55, .75, .22, ry), C('#4a504c'));
+            add(D, box, mat(jx, jy + .4, jz, .62, .05, .28, ry), C('#2a2f2c'));
+            for (let c = 0; c < 3; c++) {
+              const [ex, ez] = fp((rnd() - .5) * 5.6, .14);
+              cable(jx, jy, jz, ex, jy + (rnd() - .5) * 8, ez, 1)
+            }
+            if (rnd() < .22) SPKS.push([jx, jy + .2, jz])
+          }
+          if (rnd() < .5) {
+            const [x, z] = fp((rnd() - .5) * 4, .3), y = 2 + rnd() * 3;
+            add(D, cy, mat(x, y - .7, z, .14, 2.2, .14), C('#3a3f3b'));
+            add(D, box, mat(x, y + .5, z, .5, .4, .3, ry), C('#4a504c'))
+          }
+        });
+      }
+    const PIP = ['#3a3f3b', '#4a3a2c', '#2a2f2c', '#5a2a22', '#6a6a60'].map(C);
+    for (let s = 0; s < 2; s++) {
+      const ty = s ? TZ[l] : TX[k],
+        W = WD[ty],
+        pt = (u, v) => s ? [ox + u, ZS[l] + v] : [XS[k] + v, oz + u],
+        bz = (x, y, z, a, b, c) => s ? mat(x, y, z, a, b, c) : mat(x, y, z, c, b, a);
+      if (ty) {
+        [
+          [3, 1.3],
+          [9, W - 1.3]
+        ].forEach(([u, v], j) => {
+          const [x, z] = pt(u, v), [ex, ez] = pt(u, v < W / 2 ? v + 1.2 : v - 1.2), cc = C(pick([
+            '#b46cff', '#66ffa0', '#ff9a60'
+          ]));
+          add(D, cy, mat(x, 4.1, z, .26, 8.2, .26), C('#2a2420'));
+          add(D, box, bz(x, 7.5, z, .12, .12, 2.8), C('#2a2420'));
+          add(D, box, bz(x, 6.8, z, .12, .1, 2), C('#2a2420'));
+          add(N, sp2, mat(ex, 7.3, ez, .42, .26, .42), cc);
+          add(D, co, mat(ex, 7.55, ez, .7, .2, .7), C('#222'));
+          hl(HA, ex, 7.2, ez, 6, sc(cc, .5));
+          LS.push([ex, 7.1, ez, cc.r, cc.g, cc.b, 0]);
+          for (let c = 0; c < 2; c++) {
+            const q = pt(u + (rnd() - .5) * 3, v < W / 2 ? W : 0);
+            cable(x, 7.8 - c * .5, z, q[0], 5.5 + rnd() * 3, q[1], 3)
+          }
+          const tg = j ? (s ? (k < G - 1 && [XO[k + 1] + 3, ZS[l] + 1.3]) : (l < G - 1 && [XS[k] +
+            1.3, ZO[l + 1] + 3
+          ])) : pt(9, W - 1.3);
+          if (tg) cable(x, 7.7, z, tg[0], 7.7, tg[1], 3);
+          sol.push([x, z, .4]);
+          occ2.push([x, z, .6]);
+          add(PDB, cir, mat(x + 1.2, .013, z, .8 + R() * .8, .5 + R() * .5, 1, R() * 3, -Math.PI / 2))
+        })
+      } else {
+        {
+          const [x, z] = pt(2 + rnd() * 8, .19);
+          add(N, box, bz(x, 3.3, z, .9, .06, .1), C('#e4f6ff'));
+          add(D, box, bz(x, 3.38, z, 1, .04, .16), C('#222'));
+          hl(HA, x, 3.2, z, 4.5, C('#3a4e58'));
+          LS.push([x, 3, z, .75, .95, 1, 1])
+        }
+        for (let i = 0; i < 10; i++) {
+          const u = rnd() * 12,
+            y = 3.8 + rnd() * 9,
+            p = pt(u, .08),
+            q = pt(u + (rnd() - .5) * 2.5, W - .08),
+            y2 = y + (rnd() - .5) * 3;
+          if (i < 4) seg(D, [p[0], y, p[1]], [q[0], y2, q[1]], .1 + rnd() * .14, pick(PIP));
+          else cable(p[0], y, p[1], q[0], y2, q[1], 3)
+        }
+        for (let i = 0; i < 3; i++) {
+          const v = i % 2 ? .18 : W - .18,
+            y = 4.5 + rnd() * 7,
+            a = pt(0, v),
+            b = pt(12, v);
+          seg(D, [a[0], y, a[1]], [b[0], y + (rnd() - .5), b[1]], .16 + rnd() * .1, pick(PIP))
+        }
+        // === PATCH H: крытый переулок — рифлёный навес, потёки, затемнение, капель, лампа ===
+        if (rnd() < .45) {
+          const au = 1.5 + rnd() * 3, al = 2.6 + rnd() * 2.2, ay = 3.2 + rnd() * .5,
+            aW = W - .7, am = (rnd() * 3 | 0) / 3 * .3,
+            pcx = s ? ox + au + al / 2 : XS[k] + W / 2,
+            pcz = s ? ZS[l] + W / 2 : oz + au + al / 2;
+          add(CM, box, s ? mat(pcx, ay, pcz, al, .07, aW, am) : mat(pcx, ay, pcz, aW, .07, al, 0, 0, am), sc(C('#9aa0a4'), .55 + rnd() * .3), [0, am, 1, am + .3]);
+          add(DK, pl, mat(pcx, .022, pcz, s ? al : aW, s ? aW : al, 1, 0, -Math.PI / 2), null, [am, 0, am + .5, .5]);
+          for (const e2 of [au, au + al]) {
+            const q1 = pt(e2, .45), q2 = pt(e2, W - .05);
+            seg(D, [q1[0], ay, q1[1]], [q2[0], ay + 1.3, q2[1]], .05, C('#3a3f3b'))
+          }
+          const nd = 3 + (al / 1.2 | 0);
+          for (let d2 = 0; d2 < nd; d2++) {
+            const t2 = au + (d2 + .5) * al / nd;
+            let [qx, qz] = pt(t2, .38);
+            DRIPS.push([qx, ay - .06, qz, 0]);
+            [qx, qz] = pt(t2, W - .38);
+            DRIPS.push([qx, ay - .06, qz, 0])
+          }
+          if (rnd() < .5) {
+            const [lx2, lz2] = pt(au + al / 2, W / 2);
+            add(D, cy, mat(lx2, ay - .32, lz2, .014, .6, .014), C('#111'));
+            add(D, co, mat(lx2, ay - .68, lz2, .3, .18, .3), C('#2a2f2c'));
+            add(N, sp2, mat(lx2, ay - .82, lz2, .09, .13, .09), C('#ffd9a0'));
+            hl(HA, lx2, ay - .82, lz2, 2, C('#7a5a2a'));
+            LS.push([lx2, ay - .85, lz2, 1, .75, .45, 1])
+          }
+          for (let pq = 0; pq < 2; pq++) {
+            const [qx2, qz2] = pt(rnd() * 11 + .5, .5 + rnd() * (W - 1));
+            add(PDB, cir, mat(qx2, .013, qz2, .5 + R() * .8, .35 + R() * .5, 1, R() * 3, -Math.PI / 2))
+          }
+        }
+      }
+    }
+    const cl = ['#a8462f', '#3a6fb0', '#d8d8d0', '#c8a030', '#4a8a5a'];
+    const laundry = (x0, z0, x1, z1, ry) => {
+      const pt = cable(x0, 8 + rnd() * 3, z0, x1, 8 + rnd() * 3, z1, 1);
+      for (let i = 0; i < 6; i++) {
+        const t = .12 + i * .14,
+          q = pt(t, 0);
+        add(D, pl, mat(q[0], q[1] - .4, q[2], .4 + R() * .2, .6 + R() * .3, 1, ry), C(pick(cl)))
+      }
+    };
+    // === PATCH I: подвал — бетонная комната под улицей, лестница в шахте, коллайдеры, декор ===
+    const buildBasement = bs => {
+      const fy = -3, cyy = -.45, rx = (bs.rx0 + bs.rx1) / 2, rz = (bs.rz0 + bs.rz1) / 2,
+        rw = bs.rx1 - bs.rx0, rd2 = bs.rz1 - bs.rz0,
+        ctint = () => sc(C('#9aa0a2'), .5 + R() * .25),
+        hxc = (bs.hx0 + bs.hx1) / 2;
+      add(BC, box, mat(rx, fy - .06, rz, rw + .6, .12, rd2 + .6), C('#6a6e70'));
+      add(BC, box, mat(rx, cyy + .09, rz, rw + .6, .18, rd2 + .6), C('#8a9092'));
+      const wl = (x0, z0, x1, z1, y0, y1) => {
+        add(BC, box, mat((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, Math.max(.12, x1 - x0), y1 - y0, Math.max(.12, z1 - z0)), ctint());
+        WALLS.push({ x0, z0, x1, z1, y0, y1 })
+      };
+      wl(bs.rx0 - .15, bs.rz0 - .15, bs.rx0 + .15, bs.rz1 + .15, fy - .1, cyy);
+      wl(bs.rx1 - .15, bs.rz0 - .15, bs.rx1 + .15, bs.rz1 + .15, fy - .1, cyy);
+      wl(bs.rx0 - .15, bs.rz0 - .15, bs.rx1 + .15, bs.rz0 + .15, fy - .1, cyy);
+      wl(bs.rx0 - .15, bs.rz1 - .15, bs.hx0, bs.rz1 + .15, fy - .1, cyy);
+      wl(bs.hx1, bs.rz1 - .15, bs.rx1 + .15, bs.rz1 + .15, fy - .1, cyy);
+      add(BC, box, mat(hxc, -.22, bs.rz1 + .04, bs.hx1 - bs.hx0, .46, .32), ctint());
+      wl(bs.hx0 - .25, bs.hz0, bs.hx0, bs.hz1 + .1, fy - .1, .85);
+      wl(bs.hx1, bs.hz0, bs.hx1 + .25, bs.hz1 + .1, fy - .1, .85);
+      add(BC, box, mat(hxc, -1.5, bs.hz1 + .17, bs.hx1 - bs.hx0, 3, .34), ctint());
+      wl(bs.hx0, bs.hz0 - .3, bs.hx1, bs.hz0 + .02, -.05, .8);
+      const nst = 14;
+      for (let i = 0; i < nst; i++) {
+        const sz0 = bs.hz1 - (i + 1) * (3.4 / nst), ty3 = -i * (3 / nst);
+        add(BC, box, mat(hxc, (ty3 + fy - .1) / 2, sz0 + (3.4 / nst) / 2, bs.hx1 - bs.hx0, ty3 - fy + .1, 3.4 / nst), sc(C('#b8bcc0'), .42 + (i % 2) * .07))
+      }
+      FLR.push({ x0: bs.hx0, x1: bs.hx1, z0: bs.hz0, z1: bs.hz1, y0: fy, y1: 0 });
+      FLR.push({ x0: bs.rx0, x1: bs.rx1, z0: bs.rz0, z1: bs.rz1, y0: fy, y1: fy });
+      for (let p3 = 0; p3 < 3; p3++) {
+        const py3 = cyy - .18 - p3 * .14, pz3 = bs.rz0 + 1 + rnd() * (rd2 - 2);
+        add(D, cy, mat(rx - rw / 3 + p3 * .6, py3, pz3, .09, rw * .8, .09, 0, 0, Math.PI / 2), C(pick(['#4a3a2c', '#3a3f3b', '#5a2a22'])));
+        if (p3 == 1) {
+          add(D, cy, mat(rx + 1.2, py3, pz3, .16, .2, .16, 0, 0, Math.PI / 2), C('#455055'));
+          DRIPS.push([rx + 1.2, py3 - .12, pz3, fy])
+        }
+      }
+      for (const [lx, lz] of [[rx - 1.4, rz + .6], [hxc, bs.hz0 + 1.4]]) {
+        add(D, cy, mat(lx, cyy - .32, lz, .013, .5, .013), C('#191919'));
+        add(N, sp2, mat(lx, cyy - .62, lz, .12, .17, .12), C('#ffd9a0'));
+        hl(HA, lx, cyy - .62, lz, 2.2, C('#7a5a2a'));
+        LS.push([lx, cyy - .6, lz, 1, .78, .5, 1])
+      }
+      add(CB, box, mat(bs.rx0 + .75, fy + .3, rz - 1.2, .62, .6, .62, .3), C('#9a8a68'));
+      add(CB, box, mat(bs.rx0 + .8, fy + .88, rz - 1.15, .5, .55, .55, -.2), C('#8a7a5c'));
+      add(CB, box, mat(bs.rx0 + .7, fy + .22, rz + .1, .6, .44, .5, .1), C('#7a6a4c'));
+      add(WB, box, mat(bs.rx1 - .8, fy + .9, rz, 1.7, .05, .5), C('#8a8a80'));
+      add(WB, box, mat(bs.rx1 - .8, fy + .5, rz, 1.7, .05, .5), C('#8a8a80'));
+      for (const v4 of [-.7, 0, .7]) add(D, cy, mat(bs.rx1 - .8 + v4, fy + .45, rz + .2, .05, .9, .05), C('#3a3f3b'));
+      add(CB, box, mat(bs.rx1 - 1.1, fy + 1.12, rz - .1, .5, .4, .42, .4), C('#9a8a68'));
+      for (let b4 = 0; b4 < 3; b4++) {
+        add(RB, cy2, mat(bs.rx0 + 1.6 + b4 * .62, fy + .45, bs.rz0 + .8, .55, .9, .55), C(pick(['#6a4a3a', '#3a5a7a', '#7a2a22'])));
+        sol.push([bs.rx0 + 1.6 + b4 * .62, bs.rz0 + .8, .5, fy])
+      }
+      for (let b4 = 0; b4 < 3; b4++) add(BG, sp2, mat(rx + (R() - .5) * 3, fy + .2, bs.rz0 + 1 + R() * 1.2, .4, .32, .4, R() * 3), C(pick(['#5a5646', '#4a4438'])));
+      sol.push([bs.rx0 + .78, rz - 1.2, .6, fy]);
+      sol.push([bs.rx1 - .8, rz, .9, fy]);
+      add(D, box, mat(bs.rx0 + .2, fy + 1.5, rz + 1.6, .1, .5, .36), C('#4a504c'));
+      add(N, box, mat(bs.rx0 + .28, fy + 1.5, rz + 1.6, .02, .3, .26), C('#20262a'));
+      SPKS.push([bs.rx0 + .3, fy + 1.2, rz + 1.6]);
+      add(BSG, pl, mat(hxc, fy + 2.05, bs.rz1 - .34, .8, .4, 1), null, [0, .75, .5, 1]);
+      hl(HA, hxc, fy + 2.05, bs.rz1 - .42, 1.2, C('#1e5a38'));
+      add(BSG, pl, mat(bs.hx1 + .42, .58, bs.hz1 - .5, .9, .45, 1, Math.PI / 2), null, [.5, .75, 1, 1]);
+      add(GFL, pl, mat(rx + 1.6, fy + 1.5, bs.rz0 + .24, 1.9, 1.9, 1), null, [(R() * 4 | 0) / 4, R() < .5 ? 0 : .5, (R() * 4 | 0) / 4 + .25, R() < .5 ? .5 : 1]);
+      add(GFL, pl, mat(bs.rx0 + .24, fy + 1.4, rz - .6, 1.5, 1.5, 1, Math.PI / 2), null, [(R() * 4 | 0) / 4, R() < .5 ? 0 : .5, (R() * 4 | 0) / 4 + .25, R() < .5 ? .5 : 1]);
+      for (let p4 = 0; p4 < 3; p4++) add(PDB, cir, mat(rx - 1 + R() * 2.4, fy + .012, rz - 1 + R() * 2.4, .5 + R() * .9, .35 + R() * .5, 1, R() * 3, -Math.PI / 2));
+      if (rnd() < .5) SPKS.push([rx + 2, cyy - .3, rz - 1])
+    };
+    for (let i = 0; i < 14; i++) {
+      const sd2 = rnd() * 4 | 0,
+        t = (i % 6 + .5 + rnd() * .4) * 2,
+        r = rnd() * 17 | 0,
+        rad = RAD[r],
+        stt = sd2 == 0 ? TX[k] : sd2 == 1 ? TX[k + 1] : sd2 == 2 ? TZ[l] : TZ[l + 1],
+        off = Math.max(1.35, rad + 1.05) + rnd() * .15,
+        x = sd2 == 0 ? ox - off : sd2 == 1 ? ox + 12 + off : ox + t,
+        z = sd2 == 2 ? oz - off : sd2 == 3 ? oz + 12 + off : oz + t,
+        vr = [-Math.PI / 2, Math.PI / 2, Math.PI, 0][sd2],
+        ry = vr + (r == 3 || r == 8 ? Math.PI / 2 : 0) + (rnd() - .5) * .2,
+        W = () => sc(C('#ffffff'), .75 + R() * .35);
+      if ((stt && rnd() < .55) || (!stt && (rad > .5 || rnd() < .4)) || (r == 7 && rnd() < .7)) continue;
+      if (occ2.some(q => (q[0] - x) ** 2 + (q[1] - z) ** 2 < ((q[2] + rad) * 1.3) ** 2)) continue;
+      occ2.push([x, z, rad]);
+      if (r == 0) {
+        [
+          [0, 0, .85, .6, .72],
+          [.05, .6, .62, .4, .55],
+          [-.05, 1, .45, .28, .4],
+          [.8, 0, .7, .45, .55],
+          [-.7, 0, .6, .35, .5]
+        ].forEach(([a, y, w, hh, d], b) => {
+          if (b > 2 && R() < .4) return;
+          const q = lo(x, z, ry, a, 0),
+            rr = ry + (b ? (R() - .5) * .7 : 0);
+          add(CB, box, mat(q[0], y + hh / 2, q[1], w, hh, d, rr), W());
+          add(CB, box, mat(q[0], y + hh + .015, q[1], w * 1.03, .03, d * 1.03, rr, b % 2 ? .1 : 0),
+          W())
+        });
+        add(CB, box, mat(x + .5, .4, z + .5, .9, .02, .7, ry, .5, .9), W());
+        sol.push([x, z, .7])
+      } else if (r == 1) {
+        for (let b = 0; b < 6; b++) {
+          const tp2 = b > 3,
+            px2 = x + (R() - .5) * (tp2 ? .3 : 1),
+            pz2 = z + (R() - .5) * (tp2 ? .3 : 1),
+            s = .4 + R() * .32,
+            yy = (b > 3 ? .34 : 0) + s * .34,
+            cc = C(pick(['#0c1010', '#14201a', '#1f2a3a', '#2a2a2a', '#3a1c1c', '#d8d8d0']));
+          add(BG, sp2, mat(px2, yy, pz2, s, s * .8, s * .9, R() * 3, R() * .3), cc);
+          add(BG, co, mat(px2, yy + s * .38, pz2, .12, .2, .12), cc);
+          add(BG, sp2, mat(px2 + .05, yy + s * .5, pz2, .07, .07, .07), cc)
+        }
+        for (let b = 0; b < 5; b++) add(D, pl, mat(x + (R() - .5) * 1.6, .015, z + (R() - .5) * 1.6, .3 +
+          R() * .2, .4, 1, R() * 6, -Math.PI / 2), pick(PAP));
+        sol.push([x, z, .65])
+      } else if (r == 2) {
+        const bc = C(pick(['#8a5a3a', '#3a5a7a', '#7a2a22', '#5a5a52']));
+        add(RB, cy2, mat(x, .45, z, .6, .9, .6), bc);
+        add(RB, cy2, mat(x, .91, z, .62, .03, .62), sc(bc, .6));
+        add(RB, cy2, mat(x + .62, .45, z + .1, .58, .9, .58), sc(bc, .8));
+        add(RB, cy2, mat(x + .62, .91, z + .1, .6, .03, .6), sc(bc, .5));
+        add(RB, cy2, mat(x + .3, .05, z - .6, .5, .03, .5, ry, .12), sc(bc, .55));
+        sol.push([x, z, .7])
+      } else if (r == 3) {
+        const cc = C(pick(['#7a1f3d', '#1f3a6a', '#c8c8c0', '#2a5a4a', '#c8281e'])),
+          L = (a, b) => lo(x, z, ry, a, b);
+        let q;
+        for (const b of [-.5, .5]) {
+          q = L(0, b);
+          add(D, cy, mat(q[0], .24, q[1], .48, .12, .48, ry, 0, Math.PI / 2), C('#111'));
+          add(MB, cy, mat(q[0], .24, q[1], .24, .14, .24, ry, 0, Math.PI / 2), C('#9aa0a0'))
+        }
+        q = L(0, -.3);
+        add(PB, box, mat(q[0], .46, q[1], .4, .4, .7, ry), cc);
+        q = L(0, -.25);
+        add(D, box, mat(q[0], .7, q[1], .34, .12, .55, ry), C('#151515'));
+        q = L(0, .05);
+        add(PB, box, mat(q[0], .2, q[1], .4, .05, .5, ry), sc(cc, .6));
+        q = L(0, .42);
+        add(PB, box, mat(q[0], .6, q[1], .38, .75, .07, ry, -.15), cc);
+        q = L(0, .55);
+        add(D, cy, mat(q[0], .82, q[1], .04, .5, .04, ry), C('#222'));
+        add(D, cy, mat(q[0], 1.04, q[1], .04, .72, .04, ry, 0, Math.PI / 2), C('#222'));
+        add(PB, box, mat(q[0], .95, q[1] + .12, .4, .28, .06, ry, .3), sc(cc, .8));
+        q = L(0, .6);
+        add(N, sp2, mat(q[0], .9, q[1], .13, .13, .13), C('#fff1c0'));
+        hl(HA, q[0], .9, q[1], 1.4, C('#4a4430'));
+        q = L(0, -.82);
+        add(N, box, mat(q[0], .58, q[1], .14, .06, .03, ry), C('#ff2a2a'));
+        add(D, box, mat(q[0], .4, q[1], .2, .1, .02, ry), C('#e8e8e0'));
+        q = L(.3, .55);
+        seg(MB, [q[0], 1.04, q[1]], [q[0], 1.28, q[1]], .02, C('#222'));
+        sol.push([x, z, .55])
+      } else if (r == 4) {
+        for (let b = 0; b < 2; b++) {
+          const q = lo(x, z, ry, b * .5, 0);
+          add(PB, co, mat(q[0], .3, q[1], .34, .6, .34), C('#e8591c'));
+          add(N, co, mat(q[0], .36, q[1], .27, .1, .27), C('#9a9a94'));
+          add(PB, box, mat(q[0], .02, q[1], .44, .04, .44), C('#d85018'))
+        }
+        add(D, box, mat(x + .25, .5, z, 1.2, .12, .08, ry), C('#c8c8c0'));
+        add(D, cy, mat(x - .2, .25, z, .04, .5, .04), C('#333'));
+        add(D, cy, mat(x + .7, .25, z, .04, .5, .04), C('#333'))
+      } else if (r == 5) {
+        add(D, cy, mat(x, .72, z, .85, .05, .85), C('#8a8a80'));
+        add(D, cy, mat(x, .36, z, .08, .7, .08), C('#444'));
+        add(D, cy, mat(x, .03, z, .4, .04, .4), C('#333'));
+        for (let b = 0; b < 3; b++) {
+          const q = lo(x, z, 0, Math.cos(b * 2.1) * .65, Math.sin(b * 2.1) * .65),
+            cc = C(pick(['#a02a22', '#274a86', '#2a7a4a']));
+          add(PB, cy2, mat(q[0], .2, q[1], .32, .4, .32), cc);
+          add(PB, cy2, mat(q[0], .41, q[1], .34, .04, .34), sc(cc, .7))
+        }
+        add(PB, co, mat(x + .15, .8, z, .22, .1, .22), C('#e8e4d8'));
+        add(D, cy2, mat(x - .2, .78, z + .1, .16, .06, .16), C('#e8e4d8'));
+        add(N, cy, mat(x - .2, .81, z + .1, .12, .01, .12), C('#c87a2a'));
+        sol.push([x, z, .9])
+      } else if (r == 7) {
+        add(PB, co, mat(x, .2, z, .46, .4, .46), C('#a8522c'));
+        add(PB, cy2, mat(x, .42, z, .52, .07, .52), C('#b8603a'));
+        add(D, cy2, mat(x, .45, z, .42, .02, .42), C('#2a1e14'));
+        add(BG, cy, mat(x, .6, z, .04, .3, .04), C('#2c5a36'));
+        for (let b = 0; b < 10; b++) {
+          const a = b * .63 + R() * .3,
+            d = .08 + R() * .12;
+          add(BG, sp2, mat(x + Math.cos(a) * d, .62 + R() * .3, z + Math.sin(a) * d, .34, .05, .12, -a, 0,
+            .5 + R() * .4), C(pick(['#2c5a36', '#3a6a30', '#1e4a2a'])))
+        }
+        for (let b = 0; b < 3; b++) add(PB, sp2, mat(x + (R() - .5) * .2, .95 + R() * .1, z + (R() - .5) *
+          .2, .1, .1, .1), C(pick(['#ff7ab0', '#ffd23a', '#f4f0e8'])));
+        sol.push([x, z, .35])
+      } else if (r == 8) {
+        const P3 = (a, y, b) => {
+            const q = lo(x, z, ry, a, b);
+            return [q[0], y, q[1]]
+          },
+          fc = C(pick(['#7a1f1f', '#2a4a7a', '#2a5a4a', '#3a3a3a'])),
+          R0 = P3(-.55, .36, 0),
+          BB = P3(-.1, .3, 0),
+          S0 = P3(-.22, .78, 0),
+          HT = P3(.33, .8, 0),
+          HB = P3(.3, .58, 0),
+          F0 = P3(.55, .36, 0);
+        for (const a of [-.55, .55]) {
+          const q = lo(x, z, ry, a, 0);
+          add(D, to, mat(q[0], .36, q[1], .72, .72, .72, ry), C('#111'));
+          for (let s = 0; s < 3; s++) {
+            const c = Math.cos(s * 1.05) * .3,
+              d = Math.sin(s * 1.05) * .3;
+            seg(MB, P3(a + c, .36 + d, 0), P3(a - c, .36 - d, 0), .01, C('#bbb'))
+          }
+        }
+        for (const [p, q] of [
+            [R0, BB],
+            [BB, S0],
+            [S0, R0],
+            [BB, HB],
+            [S0, HT],
+            [HB, HT],
+            [HT, F0],
+            [HB, F0]
+          ]) seg(MB, p, q, .032, fc);
+        {
+          const a = P3(.36, .92, -.28),
+            b = P3(.36, .92, .28);
+          seg(MB, a, b, .025, C('#222'));
+          seg(MB, HT, P3(.36, .92, 0), .025, C('#222'))
+        }
+        add(D, box, mat(S0[0], .82, S0[2], .24, .05, .1, ry), C('#151515'));
+        add(D, box, mat(BB[0], .3, BB[2], .05, .03, .3, ry), C('#222'));
+        {
+          const q = P3(-.7, .7, 0);
+          add(MB, box, mat(q[0], .7, q[2], .3, .03, .18, ry), C('#6a6a62'))
+        }
+        sol.push([x, z, .55])
+      } else if (r == 9 && off > .7) {
+        add(WB, box, mat(x, .6, z, 1.2, .1, .7, ry), W());
+        for (const [a, b] of [
+            [-.5, -.3],
+            [.5, -.3],
+            [-.5, .3],
+            [.5, .3]
+          ]) {
+          const q = lo(x, z, ry, a, b);
+          add(D, cy, mat(q[0], .3, q[1], .05, .6, .05), C('#333'))
+        }
+        for (const a of [-.5, .5]) {
+          const q = lo(x, z, ry, a, 0);
+          add(D, cy, mat(q[0], 1.5, q[1], .04, 1.8, .04), C('#333'))
+        } {
+          const aj = (rnd() * 3 | 0) / 3;
+          add(AB, box, mat(x, 1.85, z, 1.5, .06, 1.1, ry, .1), null, [0, aj, 1, aj + 1 / 3])
+        }
+        for (let b = 0; b < 5; b++) {
+          const q = lo(x, z, ry, -.45 + b * .22, (R() - .5) * .3);
+          add(PB, sp2, mat(q[0], .76, q[1], .18, .16, .18), C(pick(['#d94a2a', '#e6c33a', '#3aa86a',
+            '#d8a020'
+          ])))
+        }
+        add(D, cy, mat(x, 1.74, z, .02, .18, .02), C('#222'));
+        add(N, sp2, mat(x, 1.6, z, .14, .14, .14), C('#ffd890'));
+        hl(HA, x, 1.7, z, 1.6, C('#5a3e1a'));
+        LS.push([x, 1.6, z, 1, .68, .35, 0]);
+        vents.push([x, z]);
+        sol.push([x, z, .9])
+      } else if (r == 10) {
+        const cc = C(pick(['#c0392b', '#2a6ab0', '#2a9a5a', '#d8a020']));
+        for (let b = 0; b < 2; b++) {
+          add(PB, box, mat(x, .17 + b * .34, z, .62, .34, .44, ry), cc);
+          if (b)
+            for (let c = 0; c < 12; c++) {
+              const q = lo(x, z, ry, -.22 + (c % 4) * .15, -.12 + (c / 4 | 0) * .12);
+              add(PB, cy2, mat(q[0], .44 + b * .34, q[1], .08, .22, .08), C(pick(['#2a6a3a', '#6a4a1a',
+                '#9ac8d0', '#2a2a1a'
+              ])))
+            }
+        }
+        sol.push([x, z, .45])
+      } else if (r == 11) {
+        for (let b = 0; b < 6; b++) {
+          const q = lo(x, z, ry, -.5 + b * .2, 0);
+          add(WB, box, mat(q[0], .16, q[1], .14, .03, 1, ry), W())
+        }
+        for (let b = 0; b < 3; b++) {
+          const q = lo(x, z, ry, -.45 + b * .45, 0);
+          add(WB, box, mat(q[0], .08, q[1], .12, .1, 1, ry), W())
+        }
+        add(CB, box, mat(x, .5, z, .7, .6, .6, ry + .2), W());
+        add(CB, box, mat(x + .1, .95, z, .5, .3, .45, ry + .5), W());
+        sol.push([x, z, .65])
+      } else if (r == 12) {
+        for (let b = 0; b < 3; b++) add(PB, box, mat(x + (b - 1) * .05, .2 + b * .36, z + (b == 1 ? .06 :
+          0), .6, .34, .42, ry + b * .15), C('#e4e2d6'));
+        add(PB, cy2, mat(x + .7, .15, z, .55, .3, .55), C('#2a6ab0'));
+        add(D, cy2, mat(x + .7, .28, z, .48, .02, .48), C('#1a3a5a'));
+        sol.push([x, z, .6])
+      } else if (r == 13 && off > .7) {
+        add(RB, cy2, mat(x, .45, z, .55, .9, .55), C('#6a4a3a'));
+        add(N, cy2, mat(x, .88, z, .48, .02, .48), C('#ff7a22'));
+        hl(HA, x, 1, z, 3.2, C('#7a3a10'));
+        LS.push([x, 1.1, z, 1, .45, .12, 1]);
+        vents.push([x, z]);
+        sol.push([x, z, .5])
+      } else if (r == 15 && off > .6) {
+        vend(x, z, vr, rnd() * 5 | 0);
+        sol.push([x, z, .7])
+      } else if (r == 16) {
+        if (rnd() < .5) {
+          for (let b = 0; b < 2; b++) {
+            const q = lo(x, z, ry, b * .4, 0),
+              cc = b ? C('#2a5aa0') : C('#c8281e');
+            add(RB, cy2, mat(q[0], .4, q[1], .32, .8, .32), cc);
+            add(RB, sp2, mat(q[0], .82, q[1], .32, .2, .32), cc);
+            add(MB, cy2, mat(q[0], .95, q[1], .1, .1, .1), C('#aaa'))
+          }
+          sol.push([x, z, .5])
+        } else {
+          add(D, box, mat(x, .45, z, .55, .85, .03, ry, .18), C('#2a2a28'));
+          const q = lo(x, z, ry, 0, .03);
+          add(N, box, mat(q[0], .48, q[1], .46, .7, .02, ry, .18), C('#f2e8c8'));
+          for (let b = 0; b < 3; b++) add(D, box, mat(q[0], .65 - b * .15, q[1], .34, .04, .03, ry, .18),
+            C('#3a1a10'));
+          sol.push([x, z, .4])
+        }
+      } else {
+        add(PB, co, mat(x, .22, z, .4, .44, .4), C('#e8c02a'));
+        add(D, cy, mat(x + .22, .55, z, .03, 1.2, .03, ry, 0, .35), C('#8a6a3a'));
+        add(D, sp2, mat(x + .1, .08, z, .24, .14, .24), C('#8a8a80'));
+        sol.push([x, z, .3])
+      }
+    }
+    for (let i = 0; i < 0; i++) {
+      const sd2 = rnd() * 4 | 0,
+        t = rnd() * 12,
+        off = .15 + rnd() * .4,
+        x = sd2 == 0 ? ox - off : sd2 == 1 ? ox + 12 + off : ox + t,
+        z = sd2 == 2 ? oz - off : sd2 == 3 ? oz + 12 + off : oz + t,
+        r = rnd(),
+        ry = rnd() * 6;
+      if ((sd2 == 0 ? TX[k] : sd2 == 1 ? TX[k + 1] : sd2 == 2 ? TZ[l] : TZ[l + 1]) && i > 2) continue;
+      if (r < .3) add(D, pl, mat(x, .012 + R() * .01, z, .28 + R() * .3, .38 + R() * .3, 1, ry, -Math.PI /
+        2), pick(PAP));
+      else if (r < .5) add(MB, cy, mat(x, .06, z, .07, .12, .07, ry, Math.PI / 2), pick(CAN));
+      else if (r < .68) {
+        const cc = pick(BOT),
+          q = lo(x, z, ry, 0, .12);
+        add(PB, cy, mat(x, .05, z, .1, .2, .1, ry, Math.PI / 2), cc);
+        add(PB, cy, mat(q[0], .04, q[1], .04, .08, .04, ry, Math.PI / 2), cc)
+      } else if (r < .86) add(D, sp2, mat(x, .015, z, .16, .02, .1, ry), pick(LEAF));
+      else {
+        add(PB, co, mat(x, .06, z, .1, .12, .1, ry, .6), C('#e8e4d8'))
+      }
+    }
+    if (rnd() < .6) vents.push([ox - .8 - rnd() * .5, oz + 2 + rnd() * 8]);
+    if (k < G - 1) {
+      for (let i = 0; i < 10; i++) {
+        const z = oz + rnd() * 12;
+        cable((ox + 12), 6 + rnd() * 14, z, XO[k + 1], 6 + rnd() * 14, z + (rnd() - .5) * 3, 2)
+      }
+      if (rnd() < .6) laundry((ox + 12), oz + 3 + rnd() * 6, XO[k + 1], oz + 3 + rnd() * 6, 0);
+      if (rnd() < .6) lant((ox + 12), oz + 3 + rnd() * 6, XO[k + 1], oz + 3 + rnd() * 6)
+    }
+    if (l < G - 1) {
+      for (let i = 0; i < 10; i++) {
+        const x = ox + rnd() * 12;
+        cable(x, 6 + rnd() * 14, (oz + 12), x + (rnd() - .5) * 3, 6 + rnd() * 14, ZO[l + 1], 2)
+      }
+      if (rnd() < .6) laundry(ox + 3 + rnd() * 6, (oz + 12), ox + 3 + rnd() * 6, ZO[l + 1], Math.PI / 2);
+      if (rnd() < .6) lant(ox + 3 + rnd() * 6, (oz + 12), ox + 3 + rnd() * 6, ZO[l + 1])
+    }
+    if (bsm) buildBasement(bsm);
+    fb.forEach((b, i) => toMesh(grp, b, FM[i]));
+    toMesh(grp, D, MD);
+    toMesh(grp, N, MN);
+    toMesh(grp, SG, MS);
+    toMesh(grp, SH, MH);
+    toMesh(grp, GL, MG);
+    toMesh(grp, PB, MP);
+    toMesh(grp, MB, MM);
+    toMesh(grp, GB, MGL);
+    toMesh(grp, AB, MA);
+    toMesh(grp, CB, MC);
+    toMesh(grp, WB, MW);
+    toMesh(grp, RB, MR);
+    toMesh(grp, BG, MBG);
+    toMesh(grp, GF, MGF);
+    toMesh(grp, RSB, MRS);
+    toMesh(grp, GFL, MGF2);
+    toMesh(grp, DK, MDK);
+    toMesh(grp, CM, MCM);
+    toMesh(grp, BC, MBC);
+    toMesh(grp, BSG, MBS);
+    toMesh(grp, PDB, MPud);
+    toPts(grp, HA, HA_M);
+    toPts(grp, HB, HB_M);
+    scene.add(grp);
+    chunks.push({
+      g: grp,
+      c: new T.Vector3(ox + 6, 0, oz + 6),
+      s: new T.Sphere(new T.Vector3(ox + 6, 20, oz + 6), 38)
+    });
+  }
+  const tick = () => new Promise(r => setTimeout(r, 0)),
+    ldb = document.getElementById('ldb'),
+    ldp = document.getElementById('ldp'),
+    setLd = (v, m) => {
+      ldb.style.width = (v * 100) + '%';
+      if (m) ldp.textContent = m
+    };
+  setLd(.05, 'Строим улицы…');
+  await tick();
+  for (let k = 0; k < G; k++)
+    for (let l = 0; l < G; l++) {
+      chunk(k, l);
+      setLd(.05 + .55 * (k * G + l + 1) / (G * G));
+      await tick()
+    }
+
+  // частицы: светлячки, пыль, пар, дождь
+  function mkPts(n) {
+    const pos = new Float32Array(n * 3),
+      col = new Float32Array(n * 3),
+      sz = new Float32Array(n),
+      phz = new Float32Array(n),
+      g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(pos, 3));
+    g.setAttribute('col', new T.BufferAttribute(col, 3));
+    g.setAttribute('size', new T.BufferAttribute(sz, 1));
+    g.setAttribute('ph', new T.BufferAttribute(phz, 1));
+    const ob = new T.Points(g, PM(0));
+    ob.frustumCulled = false;
+    scene.add(ob);
+    return {
+      g,
+      pos,
+      col,
+      sz,
+      ob
+    }
+  }
+  const up = p => {
+      p.g.attributes.position.needsUpdate = p.g.attributes.col.needsUpdate = true
+    },
+    wr = (v, c, L) => ((v - c + L / 2) % L + L) % L - L / 2 + c;
+  const NF = 80,
+    ND = 220,
+    FLY = mkPts(NF),
+    DUS = mkPts(ND),
+    fa = [],
+    ff = [],
+    fx = [],
+    fy = [],
+    fz = [],
+    da = [],
+    dx = [],
+    dy = [],
+    dz = [];
+  for (let i = 0; i < NF; i++) {
+    fa.push(R() * 6.28);
+    ff.push(.6 + R());
+    fx.push(R() * 24);
+    fy.push(.5 + R() * 4);
+    fz.push(R() * 24);
+    FLY.sz[i] = .2
+  }
+  for (let i = 0; i < ND; i++) {
+    da.push(R() * 6.28);
+    dx.push(R() * 18);
+    dy.push(.2 + R() * 6);
+    dz.push(R() * 18);
+    DUS.sz[i] = .04 + R() * .03
+  }
+  const NV = Math.min(vents.length, 36),
+    NS = NV * 6,
+    STM = mkPts(Math.max(NS, 1));
+  const RN = 900,
+    rp = new Float32Array(RN * 6),
+    rg = new T.BufferGeometry();
+  for (let i = 0; i < RN; i++) {
+    const x = (R() - .5) * 28,
+      y = R() * 14,
+      z = (R() - .5) * 28;
+    rp.set([x, y, z, x - .02, y - .5, z + .01], i * 6)
+  }
+  rg.setAttribute('position', new T.BufferAttribute(rp, 3));
+  const rain = new T.LineSegments(rg, new T.LineBasicMaterial({
+    color: 0x9fc4d4,
+    transparent: true,
+    opacity: .3,
+    fog: false
+  }));
+  rain.frustumCulled = false;
+  scene.add(rain);
+  // === PATCH J: искры из проводов, капли с труб, всплески, фонарик с объёмным лучом ===
+  const SPK = mkPts(64),
+    DRP = mkPts(40),
+    sLife = new Float32Array(64),
+    sMax = new Float32Array(64),
+    sVX = new Float32Array(64),
+    sVY = new Float32Array(64),
+    sVZ = new Float32Array(64),
+    drOn = new Uint8Array(40),
+    drF = new Float32Array(40),
+    drV = new Float32Array(40),
+    dripNext = new Float32Array(40);
+  let spkNext = 4, spkCur = 0;
+  for (let i = 0; i < 64; i++) {
+    SPK.pos[i * 3 + 1] = -999;
+    SPK.sz[i] = .3
+  }
+  for (let i = 0; i < 40; i++) {
+    DRP.pos[i * 3 + 1] = -999;
+    DRP.sz[i] = .1
+  }
+  const RINGS = [];
+  for (let i = 0; i < 8; i++) {
+    const rm = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({
+      map: ringT,
+      transparent: true,
+      opacity: .5,
+      blending: T.AdditiveBlending,
+      depthWrite: false
+    }));
+    rm.rotation.x = -Math.PI / 2;
+    rm.rotation.z = R() * 6;
+    rm.visible = false;
+    rm.userData.on = 0;
+    scene.add(rm);
+    RINGS.push(rm)
+  }
+  const SPKL = new T.PointLight(0xffc890, 0, 8, 2);
+  SPKL.userData.k = 0;
+  scene.add(SPKL);
+  const flashL = new T.SpotLight(0xffe2b8, 0, 26, .5, .45, 1.3);
+  scene.add(flashL);
+  scene.add(flashL.target);
+  const beam = new T.Mesh(new T.CylinderGeometry(1.7, .06, 9, 12, 1, true).rotateX(-Math.PI / 2).translate(0, 0, -4.5), new T.MeshBasicMaterial({
+    color: 0xffe8c0,
+    transparent: true,
+    opacity: .06,
+    alphaMap: beamT,
+    blending: T.AdditiveBlending,
+    depthWrite: false,
+    side: T.DoubleSide,
+    fog: false
+  }));
+  beam.frustumCulled = false;
+  scene.add(beam);
+  const _v1 = new T.Vector3();
+  // брызги капель, круги на воде, динамические цветные огни
+  let lf = 0;
+  const PLS = [0, 1, 2, 3].map(() => {
+    const l = new T.PointLight(0xffb070, 0, 15, 1.7);
+    l.userData.k = 0;
+    scene.add(l);
+    return l
+  });
+
+  // звук
+  let ac, master, nb, wb, rv, rainG, flash = 0;
+
+  function sound() {
+    if (ac) {
+      ac.resume();
+      return
+    }
+    ac = new(window.AudioContext || window.webkitAudioContext)();
+    master = ac.createGain();
+    master.gain.value = .55;
+    master.connect(ac.destination);
+    const len = ac.sampleRate * 2,
+      mk = f => {
+        const b = ac.createBuffer(1, len, ac.sampleRate),
+          d = b.getChannelData(0);
+        let l = 0;
+        for (let i = 0; i < len; i++) {
+          const w = R() * 2 - 1;
+          d[i] = f ? w : (l = (l + .02 * w) / 1.02) * 3.5
+        }
+        return b
+      };
+    const src = (b, type, fr, gv, q) => {
+      const s = ac.createBufferSource();
+      s.buffer = b;
+      s.loop = true;
+      const f = ac.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = fr;
+      if (q) f.Q.value = q;
+      const g = ac.createGain();
+      g.gain.value = gv;
+      s.connect(f);
+      f.connect(g);
+      g.connect(master);
+      s.start();
+      return g
+    };
+    nb = mk(0);
+    wb = mk(1);
+    src(nb, 'lowpass', 900, .5);
+    rainG = src(wb, 'bandpass', 4500, .06, .5);
+    [55, 82.4, 110.3].forEach(f => {
+      const s = ac.createOscillator();
+      s.frequency.value = f;
+      const g = ac.createGain();
+      g.gain.value = .025;
+      s.connect(g);
+      g.connect(master);
+      s.start()
+    });
+    const il = ac.sampleRate * 2.5,
+      ib = ac.createBuffer(2, il, ac.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = ib.getChannelData(c);
+      for (let i = 0; i < il; i++) d[i] = (R() * 2 - 1) * Math.pow(1 - i / il, 3)
+    }
+    rv = ac.createConvolver();
+    rv.buffer = ib;
+    const rg2 = ac.createGain();
+    rg2.gain.value = .6;
+    rv.connect(rg2);
+    rg2.connect(master);
+    setTimeout(ev, 3000)
+  }
+  const out = (n, pan, wet) => {
+    if (ac.createStereoPanner) {
+      const p = ac.createStereoPanner();
+      p.pan.value = pan;
+      n.connect(p);
+      n = p
+    }
+    n.connect(master);
+    if (wet) {
+      const w = ac.createGain();
+      w.gain.value = wet;
+      n.connect(w);
+      w.connect(rv)
+    }
+  };
+  const tone = (f, dur, gv, type, pan, wet, f2) => {
+    const t = ac.currentTime,
+      s = ac.createOscillator(),
+      g = ac.createGain();
+    s.type = type || 'sine';
+    s.frequency.setValueAtTime(f, t);
+    if (f2) s.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(gv, t);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    s.connect(g);
+    out(g, pan, wet);
+    s.start(t);
+    s.stop(t + dur + .05)
+  };
+  const noise = (dur, type, fr, gv, pan, wet, fr2) => {
+    const t = ac.currentTime,
+      s = ac.createBufferSource();
+    s.buffer = wb;
+    s.loop = true;
+    const f = ac.createBiquadFilter();
+    f.type = type;
+    f.frequency.setValueAtTime(fr, t);
+    if (fr2) f.frequency.linearRampToValueAtTime(fr2, t + dur);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(gv, t + dur * .35);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    s.connect(f);
+    f.connect(g);
+    out(g, pan, wet);
+    s.start(t);
+    s.stop(t + dur + .1)
+  };
+
+  function ev() {
+    if (!ac) return;
+    const r = R(),
+      pan = R() * 2 - 1;
+    if (r < .38) {
+      tone(1000 + R() * 1000, .3, .05, 'sine', pan, .8);
+      setTimeout(() => ac && tone(900 + R() * 500, .25, .02, 'sine', pan, .8), 110)
+    } else if (r < .48) tone(150, .8, .03, 'sawtooth', pan, .4, 80);
+    else if (r < .57) {
+      const n = pick([392, 440, 523, 587, 659]);
+      [1, 2.76, 5.4].forEach((m, i) => tone(n * m, 3.5 - i, .035 / (i + 1), 'sine', pan, 1))
+    } else if (r < .63) {
+      flash = 1;
+      setTimeout(() => flash = .7, 160);
+      setTimeout(() => ac && noise(5, 'lowpass', 140, .5, pan, .6, 60), 900 + R() * 1200)
+    } else if (r < .74) noise(3.5, 'bandpass', 1200, .04, pan, .4, 1800);
+    else if (r < .86) noise(5, 'bandpass', 400, .06, pan, .3, 900);
+    else tone(65, 3.5, .03, 'sawtooth', pan, .3, 110);
+    setTimeout(ev, 1700 + R() * 4200)
+  }
+
+  function step() {
+    if (!ac) return;
+    const s = ac.createBufferSource();
+    s.buffer = nb;
+    const f = ac.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 380 + R() * 300;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(.5, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + .18);
+    s.connect(f);
+    f.connect(g);
+    g.connect(master);
+    s.start(0, R());
+    s.stop(ac.currentTime + .2);
+    if (R() < .3) noise(.2, 'highpass', 2500, .04, R() - .5, 0)
+  }
+
+  // управление и цикл
+  const keys = {},
+    joy = {
+      x: 0,
+      y: 0
+    },
+    ui = document.getElementById('ui'),
+    hint = document.getElementById('hint');
+  let rainOn = true, fogOn = true, sndOn = true, flOn = false, fogD = .45,
+    fpsT = 0,
+    fpsN = 0;
+  // === PATCH K: меню настроек — независимые переключатели дождя, тумана, звука и фонарика ===
+  const fpsEl = document.getElementById('fps'),
+    menuEl = document.getElementById('menu'),
+    menuBtn = document.getElementById('menuBtn'),
+    mRain = document.getElementById('mRain'),
+    mFog = document.getElementById('mFog'),
+    mSnd = document.getElementById('mSnd'),
+    mFl = document.getElementById('mFl'),
+    mFd = document.getElementById('mFd');
+  let menuOpen = false, started = false;
+  const setRain = v => {
+    rainOn = v;
+    mRain.checked = v
+  };
+  const setMenu = v => {
+    menuOpen = v;
+    menuEl.classList.toggle('on', v);
+    if (!v && started && !coarse && !document.pointerLockElement && cvs.requestPointerLock) {
+      try {
+        cvs.requestPointerLock()
+      } catch (e) {}
+    }
+  };
+  menuBtn.onclick = () => setMenu(!menuOpen);
+  document.getElementById('mClose').onclick = () => setMenu(false);
+  mRain.onchange = () => setRain(mRain.checked);
+  mFog.onchange = () => fogOn = mFog.checked;
+  mSnd.onchange = () => {
+    sndOn = mSnd.checked;
+    if (master) master.gain.value = sndOn ? .55 : 0
+  };
+  mFl.onchange = () => flOn = mFl.checked;
+  mFd.oninput = () => fogD = mFd.value / 100;
+  const fsBtn = document.getElementById('fsBtn'),
+    de = document.documentElement,
+    fsOn = () => document.fullscreenElement || document.webkitFullscreenElement,
+    fsGo = () => {
+      if (fsOn()) return;
+      const r = de.requestFullscreen || de.webkitRequestFullscreen;
+      if (r) {
+        try {
+          const p = r.call(de);
+          if (p && p.catch) p.catch(() => {})
+        } catch (e) {}
+      }
+    },
+    toggleFs = () => {
+      if (fsOn()) {
+        const x = document.exitFullscreen || document.webkitExitFullscreen;
+        if (x) x.call(document)
+      } else fsGo()
+    };
+  if (!(de.requestFullscreen || de.webkitRequestFullscreen)) fsBtn.style.display = 'none';
+  fsBtn.onclick = toggleFs;
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(n => document.addEventListener(n, () => {
+    fsBtn.textContent = fsOn() ? '✕' : '⛶';
+    setTimeout(setQ, 120)
+  }));
+  let yaw = 0,
+    pitch = 0,
+    ty = 0,
+    tp = 0,
+    px = XS[4] + WD[1] / 2,
+    pz = ZS[3] + WD[0] / 2,
+    vx = 0,
+    vz = 0,
+    bob = 0,
+    last = 0,
+    tl = null,
+    tr = null,
+    q = coarse ? .55 : 1,
+    pr = Math.min(devicePixelRatio, coarse ? 1.25 : 1.5),
+    acc = 0,
+    fc = 0,
+    good = 0,
+    pyv = 0,
+    ug = 0,
+    fogEn = 1,
+    prevUnder = 0,
+    fogFarBase = 54;
+
+  function setQ() {
+    renderer.setPixelRatio(pr * (.6 + .4 * q));
+    renderer.setSize(innerWidth, innerHeight);
+    fogFarBase = 34 + 20 * q;
+    cam.far = fogFarBase + 10;
+    cam.aspect = innerWidth / innerHeight;
+    cam.updateProjectionMatrix();
+    SCU.value = cvs.height / 1.45
+  }
+  setQ();
+  addEventListener('keydown', e => {
+    keys[e.code] = 1;
+    if (e.code == 'KeyM' && master) {
+      sndOn = !sndOn;
+      mSnd.checked = sndOn;
+      master.gain.value = sndOn ? .55 : 0
+    }
+    if (e.code == 'KeyR') setRain(!rainOn);
+    if (e.code == 'KeyF') toggleFs();
+    if (e.code == 'KeyL') {
+      flOn = !flOn;
+      mFl.checked = flOn
+    }
+    if (e.code == 'Escape' && menuOpen) setMenu(false)
+  });
+  addEventListener('keyup', e => keys[e.code] = 0);
+  let drag = 0;
+  addEventListener('mousedown', () => drag = 1);
+  addEventListener('mouseup', () => drag = 0);
+  addEventListener('mousemove', e => {
+    if (document.pointerLockElement || drag) {
+      ty -= e.movementX * .0022;
+      tp = Math.max(-1.2, Math.min(1.2, tp - e.movementY * .0022))
+    }
+  });
+  document.addEventListener('pointerlockchange', () => {
+    if (!document.pointerLockElement && !coarse) {
+      if (started) setMenu(true);
+      else ui.classList.remove('off')
+    }
+  });
+  document.getElementById('go').onclick = () => {
+    ui.classList.add('off');
+    started = true;
+    sound();
+    if (!coarse && cvs.requestPointerLock) cvs.requestPointerLock();
+    hint.classList.add('on');
+    setTimeout(() => hint.classList.remove('on'), 7000)
+  };
+  const cl2 = (v, a) => Math.max(-a, Math.min(a, v));
+  cvs.addEventListener('touchstart', e => {
+    for (const t of e.changedTouches) {
+      const z = {
+        id: t.identifier,
+        x: t.clientX,
+        y: t.clientY
+      };
+      if (t.clientX < innerWidth / 2 && !tl) tl = z;
+      else if (!tr) tr = z
+    }
+  }, {
+    passive: true
+  });
+  cvs.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (tl && t.identifier == tl.id) {
+        joy.x = cl2((t.clientX - tl.x) / 50, 1);
+        joy.y = cl2((t.clientY - tl.y) / 50, 1)
+      } else if (tr && t.identifier == tr.id) {
+        ty -= (t.clientX - tr.x) * .005;
+        tp = cl2(tp - (t.clientY - tr.y) * .005, 1.2);
+        tr.x = t.clientX;
+        tr.y = t.clientY
+      }
+    }
+  }, {
+    passive: false
+  });
+  cvs.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) {
+      if (tl && t.identifier == tl.id) {
+        tl = null;
+        joy.x = joy.y = 0
+      }
+      if (tr && t.identifier == tr.id) tr = null
+    }
+  });
+  addEventListener('resize', setQ);
+
+  const IX = XS.map((a, i) => [a + 1.15, XO[i] - 1.15]),
+    IZ = ZS.map((a, i) => [a + 1.15, ZO[i] - 1.15]),
+    inn = (v, I) => I.some(r => v >= r[0] && v <= r[1]),
+    ok = (x, z) => inn(x, IX) || inn(z, IZ);
+  const LX = XS[1] + 1.15,
+    HX = XO[G - 1] - 1.15,
+    LZ = ZS[1] + 1.15,
+    HZ = ZO[G - 1] - 1.15,
+    fr = new T.Frustum(),
+    pm = new T.Matrix4(),
+    fogBase = new T.Color(FOGC),
+    fogFlash = new T.Color(0x4a6074),
+    fogUnderC = new T.Color(0x04070a),
+    colTmp = new T.Color();
+
+  function frame(ms) {
+    const t = ms / 1000,
+      dt = Math.min(.05, t - last);
+    last = t;
+    fpsN++;
+    if (t - fpsT > .5) {
+      fpsEl.textContent = Math.round(fpsN / (t - fpsT)) + ' FPS';
+      fpsN = 0;
+      fpsT = t
+    }
+    acc += dt;
+    fc++;
+    if (acc > 1.5 && t > 4) {
+      const f = fc / acc;
+      if (f < 38 && q > .15) {
+        q = Math.max(.15, q - .2);
+        setQ();
+        good = 0
+      } else if (f > 57 && q < 1) {
+        if (++good >= 3) {
+          q = Math.min(1, q + .1);
+          setQ();
+          good = 0
+        }
+      } else if (f <= 57) good = 0;
+      acc = fc = 0
+    }
+    yaw += (ty - yaw) * Math.min(1, dt * 14);
+    pitch += (tp - pitch) * Math.min(1, dt * 14);
+    const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) - joy.y,
+      s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + joy.x,
+      sp2 = keys.ShiftLeft ? 4.6 : 2.4;
+    const tx = (-Math.sin(yaw) * f + Math.cos(yaw) * s) * sp2,
+      tz = (-Math.cos(yaw) * f - Math.sin(yaw) * s) * sp2,
+      k = Math.min(1, dt * 7);
+    vx += (tx - vx) * k;
+    vz += (tz - vz) * k;
+    // === PATCH L: вертикальная физика — проёмы, стены, высота пола (подвалы) ===
+    const underRaw = pyv < -1.1;
+    const nx = underRaw ? px + vx * dt : Math.max(LX, Math.min(HX, px + vx * dt));
+    if (underRaw || ok(nx, pz)) px = nx;
+    const nz = underRaw ? pz + vz * dt : Math.max(LZ, Math.min(HZ, pz + vz * dt));
+    if (underRaw || ok(px, nz)) pz = nz;
+    for (const w2 of WALLS) {
+      if (pyv + 1.55 > w2.y0 && pyv + .3 < w2.y1 && px > w2.x0 - .3 && px < w2.x1 + .3 && pz > w2.z0 - .3 && pz < w2.z1 + .3) {
+        const dxa = px - (w2.x0 - .3), dxb = (w2.x1 + .3) - px, dza = pz - (w2.z0 - .3), dzb = (w2.z1 + .3) - pz,
+          m2 = Math.min(dxa, dxb, dza, dzb);
+        if (m2 == dxa) px = w2.x0 - .3;
+        else if (m2 == dxb) px = w2.x1 + .3;
+        else if (m2 == dza) pz = w2.z0 - .3;
+        else pz = w2.z1 + .3
+      }
+    }
+    let fFloor = 0 <= pyv + .6 ? 0 : -999;
+    for (const rR of FLR) {
+      if (px >= rR.x0 && px <= rR.x1 && pz >= rR.z0 && pz <= rR.z1) {
+        const tt = rR.z1 > rR.z0 ? (pz - rR.z0) / (rR.z1 - rR.z0) : 0,
+          cc = rR.y0 + (rR.y1 - rR.y0) * Math.max(0, Math.min(1, tt));
+        if (cc <= pyv + .6 && cc > fFloor) fFloor = cc
+      }
+    }
+    if (fFloor < -900) fFloor = pyv;
+    pyv += (fFloor - pyv) * Math.min(1, dt * 9);
+    for (const c of sol) {
+      const fy4 = c[3] || 0;
+      if (Math.abs(pyv - fy4) > 1.5) continue;
+      const ddx = px - c[0],
+        ddz = pz - c[1];
+      if (Math.abs(ddx) < 1.4 && Math.abs(ddz) < 1.4) {
+        const d = Math.hypot(ddx, ddz),
+          m = c[2] + .3;
+        if (d < m && d > 1e-4) {
+          px = c[0] + ddx / d * m;
+          pz = c[1] + ddz / d * m
+        }
+      }
+    }
+    const spd = Math.hypot(vx, vz),
+      pb = bob;
+    bob += spd * dt * 2.6;
+    if (spd > .5 && Math.sin(pb) > 0 && Math.sin(bob) <= 0) step();
+    cam.position.set(px, pyv + 1.7 + Math.sin(bob) * .05 * Math.min(1, spd / 2) + Math.sin(t * .8) * .008, pz);
+    cam.rotation.set(pitch + Math.sin(t * .7) * .003, yaw, (ty - yaw) * .15);
+    lamp.position.set(px, pyv + 2.4, pz);
+    const fv = 72 + Math.min(6, spd);
+    if (Math.abs(cam.fov - fv) > .05) {
+      cam.fov += (fv - cam.fov) * .1;
+      cam.updateProjectionMatrix()
+    }
+    cam.updateMatrixWorld();
+    pm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    fr.setFromProjectionMatrix(pm);
+    const cd = scene.fog.far + 12;
+    for (const c of chunks) {
+      const d = c.c.distanceTo(cam.position);
+      c.g.visible = d < cd && (d < 24 || fr.intersectsSphere(c.s))
+    }
+    // === PATCH M: подземный режим — изоляция света, отдельное затухание тумана, автозапуск фонарика ===
+    const under = pyv < -1.2;
+    ug += ((under ? 1 : 0) - ug) * Math.min(1, dt * 2.2);
+    if (under && !prevUnder) {
+      flOn = true;
+      mFl.checked = true
+    }
+    prevUnder = under;
+    flash *= Math.exp(-dt * 6);
+    hemi.intensity = (.5 + flash * 1.4) * (1 - ug * .93);
+    dl.intensity = .2 * (1 - ug * .9);
+    lamp.intensity = 1 - ug * .85;
+    fogEn += ((fogOn ? 1 : 0) - fogEn) * Math.min(1, dt * 2);
+    let fN, fF;
+    if (ug > .5) {
+      fN = .45;
+      fF = 15 * (1 - fogD * .55)
+    } else {
+      fF = fogFarBase * (1 - fogD * .78);
+      fN = 2.2 * (1 - fogD * .8)
+    }
+    fN = 60 + (fN - 60) * fogEn;
+    fF = 110 + (fF - 110) * fogEn;
+    scene.fog.near += (fN - scene.fog.near) * Math.min(1, dt * 1.8);
+    scene.fog.far += (fF - scene.fog.far) * Math.min(1, dt * 1.8);
+    colTmp.copy(fogBase).lerp(fogUnderC, ug * .92);
+    colTmp.lerp(fogFlash, flash * .55);
+    scene.fog.color.copy(colTmp);
+    scene.background.copy(scene.fog.color);
+    // === PATCH N: синхронное мерцание — шейдер (фазы ph) и материалы через JS ===
+    const hbK = flkJ(t, 2.1);
+    UT.value = t;
+    HB_M.uniforms.k.value = hbK;
+    HA_M.uniforms.k.value = .82 + .18 * flkJ(t, .7);
+    FM.forEach((m, i) => m.emissiveIntensity = (.8 + .07 * Math.sin(t * (.7 + i * .4) + i)) * (.72 + .28 * hbK));
+    MS.emissiveIntensity = R() < .035 ? .45 + R() * .3 : (.95 + .09 * Math.sin(t * 2.3) + .05 * Math.sin(t * 7.7)) * (.7 + .3 * hbK);
+    // светлячки
+    for (let i = 0; i < NF; i++) {
+      const a = fa[i],
+        f2 = ff[i],
+        x = fx[i] + Math.sin(t * .3 * f2 + a) * 2,
+        y = fy[i] + Math.sin(t * .5 * f2 + a * 2) * .6,
+        z = fz[i] + Math.cos(t * .27 * f2 + a) * 2,
+        pu = Math.pow(.5 + .5 * Math.sin(t * (1.2 + f2) + a * 3), 4) * .9 + .04,
+        pu2 = pu * (1 - ug);
+      FLY.pos[i * 3] = wr(x, px, 24);
+      FLY.pos[i * 3 + 1] = y;
+      FLY.pos[i * 3 + 2] = wr(z, pz, 24);
+      FLY.col[i * 3] = .6 * pu2;
+      FLY.col[i * 3 + 1] = .9 * pu2;
+      FLY.col[i * 3 + 2] = .28 * pu2
+    }
+    up(FLY);
+    for (let i = 0; i < ND; i++) {
+      const a = da[i];
+      DUS.pos[i * 3] = wr(dx[i] + Math.sin(t * .1 + a) * 1.5, px, 18);
+      DUS.pos[i * 3 + 1] = dy[i] + Math.sin(t * .15 + a) * .4;
+      DUS.pos[i * 3 + 2] = wr(dz[i] + Math.cos(t * .12 + a) * 1.5, pz, 18);
+      const b = .1 + .08 * Math.sin(t * .7 + a * 5);
+      DUS.col[i * 3] = b;
+      DUS.col[i * 3 + 1] = b * 1.05;
+      DUS.col[i * 3 + 2] = b * 1.1
+    }
+    up(DUS);
+    for (let i = 0; i < NS; i++) {
+      const v = i / 6 | 0,
+        j = i % 6,
+        age = (t * .18 + j / 6 + v * .37) % 1,
+        a = Math.hypot(vents[v][0] - px, vents[v][1] - pz) < 42 ? Math.sin(age * Math.PI) * .2 : 0;
+      STM.pos[i * 3] = vents[v][0] + Math.sin(age * 5 + v) * .3 + age * .4;
+      STM.pos[i * 3 + 1] = .1 + age * 3.2;
+      STM.pos[i * 3 + 2] = vents[v][1] + Math.cos(age * 4 + v) * .3;
+      STM.sz[i] = .8 + age * 1.8;
+      STM.col[i * 3] = a * .85;
+      STM.col[i * 3 + 1] = a * .92;
+      STM.col[i * 3 + 2] = a
+    }
+    if (NS) {
+      up(STM);
+      STM.g.attributes.size.needsUpdate = true
+    }
+    const rl = .5 + .5 * Math.sin(t * .05);
+    rain.material.opacity = .17 + .19 * rl;
+    rain.visible = rainOn && ug < .65;
+    if (rainG) rainG.gain.value = rainOn ? (.04 + .06 * rl) * (1 - ug * .92) : 0;
+    if (rainOn)
+      for (let i = 0; i < RN; i++) {
+        rp[i * 6 + 1] -= 16 * dt;
+        rp[i * 6 + 4] -= 16 * dt;
+        if (rp[i * 6 + 1] < -.2) {
+          rp[i * 6 + 1] = 14;
+          rp[i * 6 + 4] = 13.5
+        }
+      }
+    rg.attributes.position.needsUpdate = true;
+    rain.position.set(px, 0, pz);
+
+    if (!(lf++ % 8)) {
+      const d = [];
+      for (const s of LS) {
+        const ex = s[0] - px,
+          ez = s[2] - pz,
+          qq = ex * ex + ez * ez;
+        if (qq < 420) d.push([qq, s])
+      }
+      d.sort((m, n) => m[0] - n[0]);
+      const want = d.slice(0, 4).map(e => e[1]),
+        free = want.filter(s => !PLS.some(l => l.userData.s === s));
+      PLS.forEach(l => {
+        if (!want.includes(l.userData.s)) {
+          const s = free.shift() || null;
+          l.userData.s = s;
+          if (s) {
+            l.userData.k = 0;
+            l.userData.ph = Math.abs(Math.sin(s[0] * 12.9898 + s[2] * 78.233) * 43758.5453) % 1 * 6.28;
+            l.position.set(s[0], s[1], s[2]);
+            l.color.setRGB(s[3] * .45 + .55, s[4] * .45 + .5, s[5] * .45 + .42)
+          }
+        }
+      })
+    }
+    PLS.forEach(l => {
+      const s = l.userData.s;
+      l.userData.k += ((s ? 1 : 0) - l.userData.k) * Math.min(1, dt * 5);
+      l.intensity = l.userData.k * (s && s[6] ? 1.1 + R() * 1.0 : 1.3 * flkJ(t, l.userData.ph || 0))
+    });
+    // === PATCH O: обновление фонарика, искр, капель и всплесков ===
+    const flT = flOn ? 2.4 : 0;
+    flashL.intensity += (flT * (.94 + .05 * Math.sin(t * 43) * Math.sin(t * 7.1)) - flashL.intensity) * Math.min(1, dt * 8);
+    flashL.position.copy(cam.position);
+    flashL.position.y -= .18;
+    cam.getWorldDirection(_v1);
+    flashL.target.position.copy(cam.position).addScaledVector(_v1, 10);
+    beam.position.copy(cam.position);
+    beam.quaternion.copy(cam.quaternion);
+    beam.visible = flashL.intensity > .15;
+    beam.material.opacity = Math.min(.07, flashL.intensity * .03);
+    let spkAny = 0;
+    for (let i2 = 0; i2 < 64; i2++) {
+      if (sLife[i2] > 0) {
+        sLife[i2] -= dt;
+        spkAny = 1;
+        sVY[i2] -= 9.8 * dt;
+        SPK.pos[i2 * 3] += sVX[i2] * dt;
+        SPK.pos[i2 * 3 + 1] += sVY[i2] * dt;
+        SPK.pos[i2 * 3 + 2] += sVZ[i2] * dt;
+        const e3 = Math.max(0, sLife[i2] / sMax[i2]);
+        SPK.col[i2 * 3] = 1.5 * e3;
+        SPK.col[i2 * 3 + 1] = .9 * e3 * e3 + .15;
+        SPK.col[i2 * 3 + 2] = .3 * e3 * e3;
+        SPK.sz[i2] = .12 + .3 * e3;
+        if (sLife[i2] <= 0) SPK.pos[i2 * 3 + 1] = -999
+      }
+    }
+    if (spkAny) {
+      up(SPK);
+      SPK.g.attributes.size.needsUpdate = true
+    }
+    if (t > spkNext) {
+      spkNext = t + 2.6 + R() * 5.5;
+      const cands = [];
+      for (const s4 of SPKS) {
+        const dq4 = (s4[0] - px) ** 2 + (s4[2] - pz) ** 2;
+        if (dq4 < 2300 && Math.abs(s4[1] - pyv) < 12) cands.push(s4)
+      }
+      if (cands.length) {
+        const e4 = cands[R() * cands.length | 0];
+        for (let i2 = 0; i2 < 15; i2++) {
+          spkCur = (spkCur + 1) % 64;
+          const j2 = spkCur;
+          sLife[j2] = sMax[j2] = .25 + R() * .3;
+          sVX[j2] = (R() - .5) * 2.6;
+          sVY[j2] = -.5 + R() * 1.6;
+          sVZ[j2] = (R() - .5) * 2.6;
+          SPK.pos[j2 * 3] = e4[0];
+          SPK.pos[j2 * 3 + 1] = e4[1];
+          SPK.pos[j2 * 3 + 2] = e4[2]
+        }
+        up(SPK);
+        SPKL.position.set(e4[0], e4[1], e4[2]);
+        SPKL.userData.k = 3.2;
+        const dd4 = Math.hypot(e4[0] - px, e4[2] - pz);
+        if (ac && dd4 < 30) {
+          const pn4 = Math.max(-1, Math.min(1, (e4[0] - px) / 9));
+          noise(.16, 'highpass', 3400, .13 * (1 - dd4 / 32), pn4, .5);
+          tone(1700 + R() * 900, .05, .06, 'square', pn4, 0)
+        }
+      }
+    }
+    SPKL.userData.k *= Math.exp(-dt * 8);
+    SPKL.intensity = SPKL.userData.k;
+    for (let d3 = 0; d3 < DRIPS.length; d3++) {
+      const e5 = DRIPS[d3],
+        dq5 = (e5[0] - px) ** 2 + (e5[2] - pz) ** 2;
+      if (dq5 > 620) continue;
+      const j3 = d3 % 40;
+      if (t > dripNext[j3] && !drOn[j3]) {
+        dripNext[j3] = t + 1.6 + R() * 4.5;
+        DRP.pos[j3 * 3] = e5[0];
+        DRP.pos[j3 * 3 + 1] = e5[1];
+        DRP.pos[j3 * 3 + 2] = e5[2];
+        drV[j3] = 0;
+        drF[j3] = e5[3];
+        drOn[j3] = 1
+      }
+    }
+    let drAny = 0;
+    for (let j3 = 0; j3 < 40; j3++) {
+      if (!drOn[j3]) continue;
+      drAny = 1;
+      drV[j3] -= 9.8 * dt;
+      DRP.pos[j3 * 3 + 1] += drV[j3] * dt;
+      DRP.col[j3 * 3] = .5;
+      DRP.col[j3 * 3 + 1] = .62;
+      DRP.col[j3 * 3 + 2] = .72;
+      DRP.sz[j3] = .1;
+      if (DRP.pos[j3 * 3 + 1] <= drF[j3]) {
+        drOn[j3] = 0;
+        DRP.pos[j3 * 3 + 1] = -999;
+        const x5 = DRP.pos[j3 * 3],
+          z5 = DRP.pos[j3 * 3 + 2],
+          dq6 = (x5 - px) ** 2 + (z5 - pz) ** 2;
+        for (const rr5 of RINGS) if (!rr5.userData.on) {
+          rr5.userData.on = 1;
+          rr5.userData.a = 0;
+          rr5.userData.s0 = .1 + R() * .12;
+          rr5.position.set(x5, drF[j3] + .015, z5);
+          break
+        }
+        if (ac && dq6 < 200) {
+          const dd5 = Math.sqrt(dq6),
+            pn5 = Math.max(-1, Math.min(1, (x5 - px) / 8));
+          tone(1500 + R() * 1100, .09, .045 * Math.max(.1, 1 - dd5 / 15), 'sine', pn5, .35, 500)
+        }
+      }
+    }
+    if (drAny) up(DRP);
+    for (const rr5 of RINGS) if (rr5.userData.on) {
+      rr5.userData.a += dt * 1.7;
+      const aa = rr5.userData.a;
+      if (aa >= 1) {
+        rr5.userData.on = 0;
+        rr5.visible = false
+      } else {
+        rr5.visible = true;
+        const ss = rr5.userData.s0 + aa * .55;
+        rr5.scale.set(ss, ss, 1);
+        rr5.material.opacity = .5 * (1 - aa)
+      }
+    }
+    renderer.render(scene, cam);
+    requestAnimationFrame(frame)
+  }
+  setLd(.62, 'Загружаем текстуры и шейдеры…');
+  await tick();
+  cam.position.set(px, 1.7, pz);
+  cam.updateMatrixWorld();
+  try {
+    renderer.compile(scene, cam)
+  } catch (e) {}
+  for (let i = 0; i < chunks.length; i++) {
+    const c = chunks[i];
+    chunks.forEach(e => e.g.visible = e === c);
+    c.g.children.forEach(m => m.frustumCulled = false);
+    renderer.render(scene, cam);
+    c.g.children.forEach(m => m.frustumCulled = true);
+    setLd(.62 + .36 * (i + 1) / chunks.length);
+    await tick()
+  }
+  chunks.forEach(c => c.g.visible = true);
+  setLd(1, 'Готово');
+  await tick();
+  document.getElementById('ld').classList.add('off');
+  acc = 0;
+  fc = 0;
+  requestAnimationFrame(frame);
+})().catch(e => {
+  document.getElementById('ldp').textContent = 'Ошибка загрузки: ' + e.message;
+  console.error(e)
+});
+
+</script></body></html>
