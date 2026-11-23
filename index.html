@@ -454,7 +454,7 @@ const scene=new THREE.Scene();
 /* дымка тёмная и лёгкая: вдали темновато, но ЧЁТКО — без эффекта «дыма» */
 const FOG_COL=0x121008;
 scene.background=new THREE.Color(FOG_COL);
-scene.fog=new THREE.FogExp2(FOG_COL,0.03);
+scene.fog=new THREE.FogExp2(FOG_COL,0.036);
 
 const camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,0.08,180);
 camera.rotation.order='YXZ';
@@ -2246,12 +2246,12 @@ function updateFixtures(dt){
 }
 
 /* ---------------- ПЫЛЬ ---------------- */
-const DUST_N=140;
+const DUST_N=220;
 const dustGeo=new THREE.BufferGeometry();
 const dustPos=new Float32Array(DUST_N*3), dustSeed=new Float32Array(DUST_N);
 for(let i=0;i<DUST_N;i++){dustPos[i*3]=rng()*16;dustPos[i*3+1]=rng()*2.6;dustPos[i*3+2]=rng()*16;dustSeed[i]=rng()*100;}
 dustGeo.setAttribute('position',new THREE.BufferAttribute(dustPos,3));
-const dustMat=new THREE.PointsMaterial({size:.024,color:0xe4d49a,transparent:true,opacity:.15,depthWrite:false,sizeAttenuation:true});
+const dustMat=new THREE.PointsMaterial({size:.032,color:0xe4d49a,transparent:true,opacity:.22,depthWrite:false,sizeAttenuation:true});
 const dust=new THREE.Points(dustGeo,dustMat);scene.add(dust);
 function updateDust(dt,t){
   if(!SETTINGS.dust){dust.visible=false;return}
@@ -2349,7 +2349,7 @@ function updatePlayer(dt){
   const maxS=(sprint&&L>0.1)?RUN:WALK;
   const s=Math.sin(player.yaw),c=Math.cos(player.yaw);
   const wx=(-s)*f+c*r, wz=(-c)*f+(-s)*r;
-  const k=1-Math.exp(-(L>0.1?7:11)*dt);
+  const k=1-Math.exp(-(L>0.1?4.5:8.5)*dt);
   player.vx=lerp(player.vx,wx*maxS,k);
   player.vz=lerp(player.vz,wz*maxS,k);
 
@@ -2398,8 +2398,8 @@ function updatePlayer(dt){
     if(AUDIO.ready)AUDIO.step(0.5+player.bobAmp*(0.5+0.6*player.runF));
   }
   if(SETTINGS.bob){
-    player.bobY=Math.sin(player.bobT*2)*0.018*player.bobAmp*(0.65+0.35*player.runF);
-    player.bobRoll=Math.sin(player.bobT)*0.006*player.bobAmp*(0.5+0.5*player.runF);
+    player.bobY=Math.sin(player.bobT*2)*0.014*player.bobAmp*(0.65+0.35*player.runF);
+    player.bobRoll=Math.sin(player.bobT)*0.004*player.bobAmp*(0.5+0.5*player.runF);
   }else{player.bobY=0;player.bobRoll=0;}
 
   /* тряска от поворотов (свайп/мышь) */
@@ -2422,7 +2422,7 @@ function updatePlayer(dt){
   camera.rotation.z=player.bobRoll+player.swayR;
 
   /* FOV: чуть шире на бегу */
-  const fovT=68+1.5*player.runF;
+  const fovT=68+1.0*player.runF;
   if(Math.abs(camera.fov-fovT)>0.01){camera.fov=lerp(camera.fov,fovT,1-Math.exp(-5*dt));camera.updateProjectionMatrix();}
 
   /* --- графити-дверь: войти = уйти глубже --- */
