@@ -340,7 +340,7 @@ let rng=mulberry32(20261029);
 const LEVELS=[
 { /* ---------- LEVEL 0 — Yellow Rooms ---------- */
   name:'LEVEL 0', sub:'Yellow Rooms',
-  cell:4, wallH:3.35, fog:0.03, amb:0.52, hemi:0.36, pillarS:.45, skH:.14,
+  cell:4, wallH:4.35, fog:0.03, amb:0.52, hemi:0.36, pillarS:.45, skH:.14,
   pw:.95, ph:.95, lightI:20,
   map:[
 "##########################",
@@ -380,7 +380,7 @@ const LEVELS=[
 },
 { /* ---------- LEVEL 1 — Dark Hall (аномальный) ---------- */
   name:'LEVEL 1', sub:'Dark Hall',
-  cell:4, wallH:4.75, fog:0.034, amb:0.46, hemi:0.3, pillarS:.55, skH:.2,
+  cell:4, wallH:5.9, fog:0.034, amb:0.46, hemi:0.3, pillarS:.55, skH:.2,
   pw:1.6, ph:.8, lightI:26,
   map:[
 "########################",
@@ -2279,7 +2279,7 @@ WORLD=buildLevel(LEVELS[0]);
 /* ============================================================
    ИГРОК: move, бег, прыжок, коллизии, переходы уровней
    ============================================================ */
-const EYE=1.62, RADIUS=0.35, GRAV=13.5, JUMP_V=4.9, WALK=2.5, RUN=4.7;
+const EYE=1.68, RADIUS=0.35, GRAV=13.5, JUMP_V=4.9, WALK=2.5, RUN=4.7;
 
 const player={
   x:WORLD.spawn.x*WORLD.cell+WORLD.cell/2, z:WORLD.spawn.z*WORLD.cell+WORLD.cell/2, y:EYE, vy:0, vx:0, vz:0,
