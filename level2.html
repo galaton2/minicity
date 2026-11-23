@@ -162,6 +162,46 @@ body:not(.touch) #hintMob{display:none}
 .menu-actions button{display:flex;align-items:center;gap:16px}.menu-actions button svg,.levels-back svg{width:19px;height:19px;flex:none;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .menu-actions button .nav-label{flex:1}.menu-actions button .nav-index{font:10px ui-monospace,monospace;opacity:.55;letter-spacing:.04em}
 
+
+/* Mobile: prioritize compact horizontal layouts in landscape */
+@media (pointer:coarse) and (orientation:landscape) and (max-height:540px){
+  #topRight{top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));gap:6px}
+  .iconbtn{width:38px;height:38px;border-radius:9px}
+  .iconbtn svg{width:18px;height:18px}
+  #joyBase{width:104px;height:104px}
+  #joyStick{left:29px;top:29px;width:46px;height:46px}
+  #btnJump{right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));width:58px;height:58px}
+  #btnRun{right:calc(82px + env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));width:58px;height:58px}
+  #toast{top:calc(8px + env(safe-area-inset-top,0px));width:min(420px,46vw)}
+  .card{width:min(760px,calc(100vw - 24px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)));max-width:none;padding:18px 22px}
+  .card .ttl2{margin-bottom:8px}
+  .set{grid-template-columns:minmax(86px,1fr) 92px minmax(86px,1fr) 92px minmax(86px,1fr) 92px;gap:6px 8px;margin-top:8px}
+  .set label{font-size:12px}
+  .card>.btn{display:inline-flex;width:calc(50% - 5px);margin:10px 4px 0}
+  .map-frame{padding:12px 20px}.map-content{min-height:200px}.map-top{padding-bottom:8px}.map-title{font-size:24px}.map-meta{padding-top:8px}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:540px){
+  .menu-home{display:grid!important;grid-template-columns:minmax(220px,1fr) minmax(250px,300px);grid-template-rows:auto auto 1fr;column-gap:clamp(24px,5vw,64px);row-gap:8px;align-content:center;align-items:center;padding:5vh 7vw 7vh}
+  .menu-kicker{grid-column:1;grid-row:1}
+  .menu-title{grid-column:1;grid-row:2;margin:8px 0;font-size:clamp(38px,8vh,58px)}
+  .menu-sub{grid-column:1;grid-row:3;margin:4px 0 0;font-size:12px}
+  .menu-actions{grid-column:2;grid-row:1 / span 2;width:100%;align-self:end}
+  .menu-tools{grid-column:2;grid-row:3;width:100%;margin:12px 0 0;padding-top:10px}
+  .menu-tools label{margin-bottom:5px}.menu-tools select{padding:9px 12px}.menu-tools button{padding:9px 12px}
+  .menu-actions button{padding:12px 14px;margin:6px 0}.menu-foot{display:none}
+  .levels-wrap{padding:0}.levels-top{align-items:center}.levels-top h2{font-size:34px}.level-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}
+  #levelScreen{padding:20px 5vw}.lvcard,#levelScreen .lvcard{min-height:118px;padding:14px}.lvdesc{margin-top:8px!important}
+}
+@media (pointer:coarse) and (orientation:portrait) and (max-width:540px){
+  .menu-home{justify-content:flex-end;padding:18px 6vw calc(18px + env(safe-area-inset-bottom,0px))}
+  .menu-title{font-size:clamp(38px,12vw,54px);margin:12px 0 8px}.menu-sub{margin-bottom:16px;font-size:12px}
+  .menu-actions{width:min(320px,88vw)}.menu-actions button{padding:13px 14px;margin:7px 0}
+  .menu-tools{width:min(320px,88vw);margin-top:12px;padding-top:10px}.menu-tools select,.menu-tools button{padding:10px 12px}
+  .menu-foot{display:none}
+  .level-grid{gap:8px}.lvcard,#levelScreen .lvcard{min-height:120px;padding:14px}
+  .card{width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;padding:18px}.set{grid-template-columns:1fr 124px}
+}
+
 </style>
 </head>
 <body>
