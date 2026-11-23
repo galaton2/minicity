@@ -340,7 +340,7 @@ let rng=mulberry32(20261029);
 const LEVELS=[
 { /* ---------- LEVEL 0 — Yellow Rooms ---------- */
   name:'LEVEL 0', sub:'Yellow Rooms',
-  cell:4, wallH:4.35, fog:0.03, amb:0.52, hemi:0.36, pillarS:.45, skH:.14,
+  cell:4, wallH:4.35, fog:0.036, amb:0.46, hemi:0.31, pillarS:.45, skH:.14,
   pw:.95, ph:.95, lightI:20,
   map:[
 "##########################",
@@ -374,7 +374,7 @@ const LEVELS=[
   alcoveHW:.85, alcoveTop:2.7,
   graff:{cx:22,cz:25,face:'N'},
   /* детали локации: пятна, бумаги, вентиляция, кабели, стулья, таблички */
-  details:{stains:9,carpet:7,papers:6,vents:5,cables:4,
+  details:{stains:13,carpet:10,papers:8,vents:6,cables:7,
     chairs:[{c:[4,7],rot:.4},{c:[13,20],rot:-.8},{c:[20,5],rot:1.2,stack:3}],
     plaques:[{c:[13,0],face:'S'}]},
 },
@@ -496,6 +496,20 @@ function makeWallpaper(){
       }
     }
     grain(g,w,h,3600,.06);
+    for(let i=0;i<9;i++){
+      const x=rng()*w,y=rng()*h,len=12+rng()*42;
+      g.strokeStyle=`rgba(58,50,26,${.12+rng()*0.13})`;
+      g.lineWidth=.7+rng()*1.2;
+      g.beginPath();g.moveTo(x,y);
+      for(let k=1;k<=4;k++)g.lineTo(x+(rng()-.5)*10,y+(len*k/4));
+      g.stroke();
+    }
+    for(let i=0;i<5;i++){
+      const x=rng()*w,y=rng()*h,r=22+rng()*45;
+      const moisture=g.createRadialGradient(x,y,2,x,y,r);
+      moisture.addColorStop(0,'rgba(48,67,54,.11)');moisture.addColorStop(1,'rgba(48,67,54,0)');
+      g.fillStyle=moisture;g.fillRect(x-r,y-r,r*2,r*2);
+    }
     for(let i=0;i<10;i++){ // разводы
       const x=rng()*w,y=rng()*h,r=30+rng()*90;
       const gr=g.createRadialGradient(x,y,0,x,y,r);
@@ -650,11 +664,11 @@ function makeGraffiti(){
 
 /* ---------------- МАТЕРИАЛЫ ---------------- */
 const wallTex=makeWallpaper();
-const wallMat=new THREE.MeshStandardMaterial({map:wallTex,bumpMap:wallTex,bumpScale:.45,roughness:.92,metalness:0,dithering:true,shadowSide:THREE.DoubleSide});
+const wallMat=new THREE.MeshStandardMaterial({map:wallTex,bumpMap:wallTex,bumpScale:.62,roughness:.88,metalness:0,dithering:true,shadowSide:THREE.DoubleSide});
 const wallDarkMat=new THREE.MeshStandardMaterial({map:wallTex,roughness:.95,metalness:0,color:0xb9b088,shadowSide:THREE.DoubleSide});
 const carpetTex=makeCarpet();
 carpetTex.repeat.set(1,1); // UV пола — мировые (x/2, z/2)
-const carpetMat=new THREE.MeshStandardMaterial({map:carpetTex,bumpMap:carpetTex,bumpScale:.55,roughness:1,metalness:0,dithering:true});
+const carpetMat=new THREE.MeshStandardMaterial({map:carpetTex,bumpMap:carpetTex,bumpScale:.72,roughness:.96,metalness:0,dithering:true});
 const ceilTex=makeCeiling();
 const ceilMat=new THREE.MeshStandardMaterial({map:ceilTex,roughness:.9,metalness:0,dithering:true});
 const baseTex=makeBase();
@@ -2161,15 +2175,15 @@ const POOL=4, pool=[];
 function rebuildPool(qual){
   for(const L of pool){scene.remove(L);L.dispose();}
   pool.length=0;
-  const nShadow=qual==='high'?1:0;
-  const size=512;
+  const nShadow=qual==='high'?2:qual==='mid'?1:0;
+  const size=qual==='high'?1024:512;
   for(let i=0;i<POOL;i++){
     const L=new THREE.PointLight(0xffedb8,0,18,1.75);
     if(i<nShadow){
       L.castShadow=true;
       L.shadow.mapSize.set(size,size);
       L.shadow.camera.near=0.15;L.shadow.camera.far=20;
-      L.shadow.bias=-0.006;L.shadow.normalBias=0.03;
+      L.shadow.bias=-0.003;L.shadow.normalBias=0.018;
     }
     scene.add(L);pool.push(L);
   }
