@@ -401,7 +401,7 @@ function inStairCell(st,x,z){if(!st)return false;const [cx,cz]=st.c,l=st.cells||
 const canvas=document.getElementById('c');
 let renderer;
 try{
-  renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
 }catch(e){ document.getElementById('nogl').style.display='flex'; throw e; }
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -416,7 +416,7 @@ const FOG_COL=0x121008;
 scene.background=new THREE.Color(FOG_COL);
 scene.fog=new THREE.FogExp2(FOG_COL,0.03);
 
-const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.08,110);
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.08,180);
 camera.rotation.order='YXZ';
 
 /* фоновая подсветка пониже: темнота вдали создаётся светом, а не «дымкой» */
@@ -2805,7 +2805,7 @@ function saveSet(){try{localStorage.setItem('br0set',JSON.stringify(SETTINGS));}
 function applyQuality(){
   const dpr=Math.min(devicePixelRatio||1,1.25);
   renderer.shadowMap.enabled=SETTINGS.qual==='high';
-  const r=SETTINGS.qual==='low'?Math.min(dpr,1)*0.62:SETTINGS.qual==='mid'?Math.min(dpr,1)*.85:Math.min(dpr,1.25);
+  const r=SETTINGS.qual==='low'?Math.min(dpr,1)*0.62:SETTINGS.qual==='mid'?Math.min(dpr,1)*.85:Math.min(Math.max(dpr,1),2);
   renderer.setPixelRatio(r);
   renderer.setSize(innerWidth,innerHeight);
   renderer.shadowMap.needsUpdate=true;
@@ -3071,7 +3071,7 @@ addEventListener('keydown',e=>{if(e.repeat)return;if(e.code==='KeyM'){e.preventD
 function loop(t){
   requestAnimationFrame(loop);
   let dt=(t-last)/1000;if(dt<1/65)return;last=t;
-  if(started&&!paused&&!document.hidden){warmup-=dt;perfTime+=dt;perfFrames++;if(perfTime>=3){if(warmup<0&&perfFrames/perfTime<38&&renderScale>.6){renderScale=Math.max(.6,renderScale-.1);renderer.setPixelRatio(Math.max(.5,renderer.getPixelRatio()*.85));renderer.setSize(innerWidth,innerHeight);}perfTime=0;perfFrames=0;}}
+  if(started&&!paused&&!document.hidden){warmup-=dt;perfTime+=dt;perfFrames++;if(perfTime>=3){if(SETTINGS.qual!=='high'&&warmup<0&&perfFrames/perfTime<38&&renderScale>.6){renderScale=Math.max(.6,renderScale-.1);renderer.setPixelRatio(Math.max(.5,renderer.getPixelRatio()*.85));renderer.setSize(innerWidth,innerHeight);}perfTime=0;perfFrames=0;}}
 
   if(dt>0.05)dt=0.05;
   if(dt<=0)dt=0.001;
