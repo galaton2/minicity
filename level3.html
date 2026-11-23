@@ -295,7 +295,7 @@ let rng=mulberry32(20261029);
 const LEVELS=[
 {
   name:'LEVEL 3', sub:'Apartments',
-  cell:2.6, wallH:3.35, fog:0.036, amb:0.47, hemi:0.3, pillarS:.42, skH:.14,
+  cell:2.6, wallH:4.35, fog:0.036, amb:0.47, hemi:0.3, pillarS:.42, skH:.14,
   pw:1.15, ph:.5, lightI:13,
   spawn:{x:11,z:21,yaw:0},
   deadC:0.12, flickC:0.2, flickSpeed:1.35, lampGrid:'auto', startFlicker:true, waveEvery:21,
@@ -2267,7 +2267,7 @@ WORLD=buildLevel(LEVELS[0]);
 /* ============================================================
    ИГРОК: move, бег, прыжок, коллизии, переходы уровней
    ============================================================ */
-const EYE=1.62, RADIUS=0.35, GRAV=13.5, JUMP_V=4.9, WALK=2.5, RUN=4.7;
+const EYE=1.68, RADIUS=0.35, GRAV=13.5, JUMP_V=4.9, WALK=2.5, RUN=4.7;
 
 const player={
   x:WORLD.spawn.x*WORLD.cell+WORLD.cell/2, z:WORLD.spawn.z*WORLD.cell+WORLD.cell/2, y:EYE, vy:0, vx:0, vz:0,
