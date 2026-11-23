@@ -295,7 +295,7 @@ let rng=mulberry32(20261029);
 const LEVELS=[
 { /* ---------- LEVEL 4 — Pillar Hall (по фото) ---------- */
   name:'LEVEL 4', sub:'Pillar Hall',
-  cell:2.6, wallH:3.3, fog:0.028, amb:0.5, hemi:0.34, pillarS:.58, skH:.14,
+  cell:2.6, wallH:4.3, fog:0.028, amb:0.5, hemi:0.34, pillarS:.58, skH:.14,
   pw:2.6, ph:.32, lightI:20,
   map:[
 "########E#####E#####E#######",
@@ -2204,7 +2204,7 @@ WORLD=buildLevel(LEVELS[0]);
 /* ============================================================
    ИГРОК: move, бег, прыжок, коллизии, переходы уровней
    ============================================================ */
-const EYE=1.62, RADIUS=0.35, GRAV=13.5, JUMP_V=4.9, WALK=2.5, RUN=4.7;
+const EYE=1.68, RADIUS=0.35, GRAV=13.5, JUMP_V=4.9, WALK=2.5, RUN=4.7;
 
 const player={
   x:WORLD.spawn.x*WORLD.cell+WORLD.cell/2, z:WORLD.spawn.z*WORLD.cell+WORLD.cell/2, y:EYE, vy:0, vx:0, vz:0,
