@@ -341,7 +341,7 @@ const FOG_COL=0x121008;
 scene.background=new THREE.Color(FOG_COL);
 scene.fog=new THREE.FogExp2(FOG_COL,0.03);
 
-const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.08,180);
+const camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,0.08,180);
 camera.rotation.order='YXZ';
 
 /* фоновая подсветка пониже: темнота вдали создаётся светом, а не «дымкой» */
@@ -2283,13 +2283,13 @@ function updatePlayer(dt){
     if(AUDIO.ready)AUDIO.step(0.5+player.bobAmp*(0.5+0.6*player.runF));
   }
   if(SETTINGS.bob){
-    player.bobY=Math.sin(player.bobT*2)*0.025*player.bobAmp*(0.65+0.35*player.runF);
-    player.bobRoll=Math.sin(player.bobT)*0.009*player.bobAmp*(0.5+0.5*player.runF);
+    player.bobY=Math.sin(player.bobT*2)*0.018*player.bobAmp*(0.65+0.35*player.runF);
+    player.bobRoll=Math.sin(player.bobT)*0.006*player.bobAmp*(0.5+0.5*player.runF);
   }else{player.bobY=0;player.bobRoll=0;}
 
   /* тряска от поворотов (свайп/мышь) */
-  player.swayR=lerp(player.swayR,clamp(-INPUT.lookVX*0.0011,-0.05,0.05),1-Math.exp(-9*dt));
-  player.swayP=lerp(player.swayP,clamp(-INPUT.lookVY*0.0007,-0.03,0.03),1-Math.exp(-9*dt));
+  player.swayR=lerp(player.swayR,clamp(-INPUT.lookVX*0.0007,-0.035,0.035),1-Math.exp(-9*dt));
+  player.swayP=lerp(player.swayP,clamp(-INPUT.lookVY*0.00045,-0.02,0.02),1-Math.exp(-9*dt));
   INPUT.lookVX*=Math.exp(-7*dt);INPUT.lookVY*=Math.exp(-7*dt);
 
   /* пружина приземления */
@@ -2301,13 +2301,13 @@ function updatePlayer(dt){
   const idle=Math.sin(TIME*br*2*Math.PI);
 
   const breathing=SETTINGS.bob?idle:0;
-  camera.position.set(player.x,player.y+player.bobY+player.dip+breathing*0.004,player.z);
-  camera.rotation.x=player.pitch+player.swayP+breathing*0.0016;
+  camera.position.set(player.x,player.y+player.bobY+player.dip+breathing*0.002,player.z);
+  camera.rotation.x=player.pitch+player.swayP+breathing*0.001;
   camera.rotation.y=player.yaw;
   camera.rotation.z=player.bobRoll+player.swayR;
 
   /* FOV: чуть шире на бегу */
-  const fovT=SETTINGS.fov+3.5*player.runF;
+  const fovT=68+1.5*player.runF;
   if(Math.abs(camera.fov-fovT)>0.01){camera.fov=lerp(camera.fov,fovT,1-Math.exp(-5*dt));camera.updateProjectionMatrix();}
 
   /* --- графити-дверь: войти = уйти глубже --- */
@@ -2402,9 +2402,9 @@ function finishGame(){
 let locked=false;
 addEventListener('mousemove',e=>{
   if(!locked||paused)return;
-  const s=0.0021*SETTINGS.sens;
+  const s=0.0018*SETTINGS.sens;
   player.yaw-=e.movementX*s;
-  player.pitch=clamp(player.pitch-e.movementY*s,-1.45,1.45);
+  player.pitch=clamp(player.pitch-e.movementY*s,-1.35,1.35);
   INPUT.lookVX=lerp(INPUT.lookVX,e.movementX,0.6);
   INPUT.lookVY=lerp(INPUT.lookVY,e.movementY,0.6);
 });
@@ -2721,7 +2721,7 @@ const isTouch=matchMedia('(pointer:coarse)').matches||navigator.maxTouchPoints>0
 if(isTouch)document.body.classList.add('touch');
 
 /* ---------------- настройки ---------------- */
-let SETTINGS={vol:0.8,sens:1,fov:75,bob:true,dust:true,fps:true,qual:'mid'};
+let SETTINGS={vol:0.8,sens:1,fov:68,bob:true,dust:true,fps:true,qual:'mid'};
 try{
   const s=JSON.parse(localStorage.getItem('br0set'));
   if(s&&typeof s==='object')SETTINGS=Object.assign(SETTINGS,s);
@@ -2887,9 +2887,9 @@ if(isTouch){
       if(t.identifier!==lookId)continue;
       const dx=t.clientX-lookX,dy=t.clientY-lookY;
       lookX=t.clientX;lookY=t.clientY;
-      const s=0.0034*SETTINGS.sens;
+      const s=0.0028*SETTINGS.sens;
       player.yaw-=dx*s;
-      player.pitch=clamp(player.pitch-dy*s,-1.45,1.45);
+      player.pitch=clamp(player.pitch-dy*s,-1.35,1.35);
       INPUT.lookVX=lerp(INPUT.lookVX,dx,0.5);
       INPUT.lookVY=lerp(INPUT.lookVY,dy,0.5);
     }
